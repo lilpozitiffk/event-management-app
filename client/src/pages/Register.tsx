@@ -3,7 +3,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 
-export default function Login() {
+export default function Register() {
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -18,15 +19,13 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      const response = await api.post('/auth/login', { email, password });
-      
+      const response = await api.post('/auth/register', { name, email, password });
       
       login(response.data.access_token, response.data.user);
       
-      
       navigate('/');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Login failed. Please try again.');
+      setError(err.response?.data?.message || 'Registration failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -36,11 +35,27 @@ export default function Login() {
     <div className="min-h-[80vh] flex items-center justify-center">
       <div className="max-w-md w-full bg-white rounded-lg shadow-md p-8">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">Welcome Back</h1>
-          <p className="text-gray-600 mt-2">Sign in to your account</p>
+          <h1 className="text-3xl font-bold text-gray-800">Create Account</h1>
+          <p className="text-gray-600 mt-2">Sign up to get started</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Name Input */}
+          <div>
+            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+              Full Name
+            </label>
+            <input
+              id="name"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition"
+              placeholder="John Doe"
+            />
+          </div>
+
           {/* Email Input */}
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
@@ -68,6 +83,7 @@ export default function Login() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              minLength={6}
               className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition"
               placeholder="••••••••"
             />
@@ -86,25 +102,18 @@ export default function Login() {
             disabled={isLoading}
             className="w-full bg-primary text-white py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition"
           >
-            {isLoading ? 'Signing in...' : 'Sign In'}
+            {isLoading ? 'Creating account...' : 'Sign Up'}
           </button>
         </form>
 
-        {/* Register Link */}
+        {/* Login Link */}
         <div className="mt-6 text-center">
           <p className="text-gray-600">
-            Don't have an account?{' '}
-            <Link to="/register" className="text-primary hover:text-indigo-700 font-medium">
-              Sign up
+            Already have an account?{' '}
+            <Link to="/login" className="text-primary hover:text-indigo-700 font-medium">
+              Sign in
             </Link>
           </p>
-        </div>
-
-        {/* Test Credentials Hint */}
-        <div className="mt-6 p-4 bg-gray-50 rounded-md">
-          <p className="text-sm text-gray-600 font-medium">Test Credentials:</p>
-          <p className="text-sm text-gray-500 mt-1">Email: john@example.com</p>
-          <p className="text-sm text-gray-500">Password: password123</p>
         </div>
       </div>
     </div>

@@ -4,6 +4,7 @@ import Navbar from './components/Navbar';
 
 
 import Login from './pages/Login';
+import Register from './pages/Register';
 import EventsList from './pages/EventsList';
 import MyEvents from './pages/MyEvents';
 import CreateEvent from './pages/CreateEvent';
@@ -11,7 +12,7 @@ import CreateEvent from './pages/CreateEvent';
 
 const ProtectedRoute = ({ children }: { children: React.ReactElement }) => {
   const { user, isLoading } = useAuth();
-  if (isLoading) return <div>Loading...</div>;
+  if (isLoading) return <div className="flex justify-center items-center h-screen">Loading...</div>;
   if (!user) return <Navigate to="/login" />;
   return children;
 };
@@ -23,6 +24,7 @@ function AppRoutes() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
           <Route path="/" element={<EventsList />} />
           <Route path="/my-events" element={<ProtectedRoute><MyEvents /></ProtectedRoute>} />
           <Route path="/create-event" element={<ProtectedRoute><CreateEvent /></ProtectedRoute>} />
