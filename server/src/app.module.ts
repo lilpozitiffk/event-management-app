@@ -7,15 +7,13 @@ import { User } from './entities/user.entity';
 import { Event } from './entities/event.entity';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
+import { EventsModule } from './events/events.module';
 
 @Module({
   imports: [
-
     ConfigModule.forRoot({
       isGlobal: true, 
     }),
-    
-
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -27,12 +25,12 @@ import { UsersModule } from './users/users.module';
         password: configService.get('DB_PASSWORD'),
         database: configService.get('DB_NAME'),
         entities: [User, Event],
-        synchronize: true, 
+        synchronize: true,
       }),
     }),
-
     UsersModule, 
     AuthModule,
+    EventsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

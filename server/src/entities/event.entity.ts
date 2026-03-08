@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, ManyToMany, JoinTable } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, ManyToMany, JoinTable, JoinColumn } from 'typeorm';
 import { User } from './user.entity';
 
 @Entity()
@@ -28,7 +28,11 @@ export class Event {
   isPublic: boolean;
 
   @ManyToOne(() => User, (user) => user.organizedEvents)
+  @JoinColumn({ name: 'organizerId' })
   organizer: User;
+
+  @Column()
+  organizerId: number;
 
   @ManyToMany(() => User, (user) => user.joinedEvents)
   @JoinTable()
