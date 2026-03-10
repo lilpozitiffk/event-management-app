@@ -7,10 +7,10 @@ export class CreateEventDto {
   @IsNotEmpty()
   title: string;
 
-  @ApiProperty({ example: 'Test' })
+  @ApiPropertyOptional({ example: 'Annual conference' })
   @IsString()
-  @IsNotEmpty()
-  description: string;
+  @IsOptional()
+  description?: string;
 
   @ApiProperty({ example: '2026-12-04' })
   @IsString()

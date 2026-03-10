@@ -15,11 +15,11 @@ export const createEventSchema = yup.object({
     .string()
     .required('Title is required')
     .min(3, 'Title must be at least 3 characters'),
-  
+
   description: yup
     .string()
     .optional(),
-  
+
   date: yup
     .string()
     .required('Date is required')
@@ -29,11 +29,11 @@ export const createEventSchema = yup.object({
     .string()
     .required('Time is required')
     .matches(timeRegex, 'Time must be in HH:mm format'),
-  
+
   location: yup
     .string()
     .required('Location is required'),
-  
+
   capacity: yup
     .number()
     .transform((value, originalValue) => {
@@ -41,7 +41,7 @@ export const createEventSchema = yup.object({
     })
     .nullable()
     .moreThan(0, 'Capacity must be greater than 0'),
-  
+
   isPublic: yup
     .boolean()
     .default(true),
@@ -63,10 +63,12 @@ export const eventSchema = yup.object({
     .optional(),
   date: yup
     .string()
-    .required('Date is required'),
+    .required('Date is required')
+    .matches(dateRegex, 'Date must be in YYYY-MM-DD format'),
   time: yup
     .string()
-    .required('Time is required'),
+    .required('Time is required')
+    .matches(timeRegex, 'Time must be in HH:mm format'),
   location: yup
     .string()
     .required('Location is required'),
@@ -80,6 +82,10 @@ export const eventSchema = yup.object({
   isPublic: yup
     .boolean()
     .default(true),
+}).test('future-datetime', 'Event cannot be in the past', (value) => {
+  const eventDate = parseEventDateTime(value?.date, value?.time);
+  if (!eventDate) return false;
+  return eventDate.getTime() >= Date.now();
 }).required();
 
 export type EventFormData = yup.InferType<typeof eventSchema>;

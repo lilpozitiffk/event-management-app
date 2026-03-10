@@ -55,4 +55,9 @@ export const updateEventSchema = yup
       .optional(),
     isPublic: yup.boolean().optional(),
   })
+  .test('future-date', 'Cannot set events in the past', (value) => {
+    const eventDate = parseEventDateTime(value?.date, value?.time);
+    if (!eventDate) return true;
+    return eventDate.getTime() >= Date.now();
+  })
   .required();

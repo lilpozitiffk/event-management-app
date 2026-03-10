@@ -18,6 +18,7 @@ import { UpdateEventDto } from './dto/update-event.dto';
 import { YupValidationPipe } from '../common/pipes/yup-validation.pipe';
 import { createEventSchema, updateEventSchema } from './schemas/event.schema';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../auth/optional-jwt-auth.guard';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 @ApiTags('Events')
@@ -35,15 +36,19 @@ export class EventsController {
   }
 
   @Get()
+  @UseGuards(OptionalJwtAuthGuard)
   @ApiOperation({ summary: 'Fetch public events' })
-  async findAll(@Query('search') search?: string) {
-    return this.eventsService.findAll(undefined, search);
+  async findAll(@Query('search') search?: string, @Request() req?: { user?: { id: number } }) {
+    const user = req?.user ? ({ id: req.user.id } as any) : undefined;
+    return this.eventsService.findAll(user, search);
   }
 
   @Get(':id')
+  @UseGuards(OptionalJwtAuthGuard)
   @ApiOperation({ summary: 'Fetch single event' })
-  async findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.eventsService.findOne(id);
+  async findOne(@Param('id', ParseIntPipe) id: number, @Request() req?: { user?: { id: number } }) {
+    const user = req?.user ? ({ id: req.user.id } as any) : undefined;
+    return this.eventsService.findOne(id, user);
   }
 
   @Patch(':id')
