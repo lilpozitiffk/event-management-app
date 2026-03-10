@@ -3,15 +3,15 @@ services:
     image: postgres:15
     container_name: event_db
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: eventdb
+      POSTGRES_USER: ${POSTGRES_USER:-user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-eventdb}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d eventdb"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-user} -d ${POSTGRES_DB:-eventdb}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -22,15 +22,15 @@ services:
       dockerfile: Dockerfile
     container_name: event_backend
     ports:
-      - "3000:3000"
+      - "${BACKEND_PORT:-3000}:3000"
     environment:
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_USER: user
-      DB_PASSWORD: password
-      DB_NAME: eventdb
-      JWT_SECRET: supersecretkey123
-      PORT: 3000
+      DB_HOST: ${DB_HOST:-postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-user}
+      DB_PASSWORD: ${DB_PASSWORD:-password}
+      DB_NAME: ${DB_NAME:-eventdb}
+      JWT_SECRET: ${JWT_SECRET:-supersecretkey123}
+      PORT: ${PORT:-3000}
     depends_on:
       postgres:
         condition: service_healthy
@@ -45,9 +45,9 @@ services:
       dockerfile: Dockerfile
     container_name: event_frontend
     ports:
-      - "5173:5173"
+      - "${FRONTEND_PORT:-5173}:5173"
     environment:
-      VITE_API_URL: http://localhost:3000
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
     depends_on:
       - backend
     volumes:

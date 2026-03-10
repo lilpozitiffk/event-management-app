@@ -1,208 +1,148 @@
-import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
 import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { createEventSchema } from '../schemas/event.schema';
 import { eventsApi } from '../services/events.service';
-import { ArrowLeft } from 'lucide-react';
 
 export default function CreateEvent() {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    date: '',
-    time: '',
-    location: '',
-    capacity: '',
-    isPublic: true,
+  const [submitError, setSubmitError] = useState('');
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm({
+    resolver: yupResolver(createEventSchema),
+    mode: 'onTouched',
+    defaultValues: {
+      isPublic: true,
+    },
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value, type } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
-    }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-
-    const eventDateTime = new Date(`${formData.date}T${formData.time}`);
-    const now = new Date();
-    
-    if (eventDateTime <= now) {
-      setError('Cannot create events in the past');
-      return;
-    }
-
+  const onSubmit = async (data: any) => {
+    setSubmitError('');
     try {
-      setLoading(true);
-      const eventData = {
-        ...formData,
-        capacity: formData.capacity ? Number(formData.capacity) : null,
+      const payload = {
+        ...data,
+        description: data.description?.trim() || 'No description provided',
+        capacity: Number.isNaN(data.capacity) || data.capacity === '' ? null : data.capacity,
+        isPublic: data.isPublic === true || data.isPublic === 'true',
       };
-      
-      const newEvent = await eventsApi.create(eventData);
-      navigate(`/events/${newEvent.id}`);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to create event');
-    } finally {
-      setLoading(false);
+      const createdEvent = await eventsApi.create(payload);
+      navigate(`/events/${createdEvent.id}`);
+    } catch (error: any) {
+      const details = error.response?.data?.details;
+      if (details && typeof details === 'object') {
+        const firstError = Object.values(details)[0];
+        setSubmitError(String(firstError));
+      } else {
+        setSubmitError(error.response?.data?.message || 'Failed to create event');
+      }
     }
   };
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8">
-      <button 
-        onClick={() => navigate('/')} 
-        className="flex items-center text-gray-600 hover:text-gray-900 mb-6"
-      >
-        <ArrowLeft className="w-4 h-4 mr-2" /> Back to events
-      </button>
+    <div className="max-w-2xl mx-auto p-6 bg-white shadow-md rounded-lg mt-10">
+      <h1 className="text-2xl font-bold mb-6 text-gray-800">Create New Event</h1>
 
-      <h1 className="text-3xl font-bold text-gray-900 mb-6">Create New Event</h1>
+      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+        <div className="flex flex-col">
+          <label htmlFor="title" className="mb-1 font-medium text-gray-700">Event Title *</label>
+          <input
+            id="title"
+            type="text"
+            {...register('title')}
+            className={`border rounded p-2 focus:outline-none focus:ring-2 ${errors.title ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-blue-200'}`}
+          />
+          {errors.title && <span className="text-red-500 text-sm mt-1">{errors.title?.message}</span>}
+        </div>
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm">
-            {error}
+        <div className="flex flex-col">
+          <label htmlFor="description" className="mb-1 font-medium text-gray-700">Description</label>
+          <textarea
+            id="description"
+            rows={4}
+            {...register('description')}
+            className={`border rounded p-2 focus:outline-none focus:ring-2 ${errors.description ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-blue-200'}`}
+          />
+          {errors.description && <span className="text-red-500 text-sm mt-1">{errors.description?.message}</span>}
+        </div>
+
+        <div className="flex flex-col">
+          <label htmlFor="date" className="mb-1 font-medium text-gray-700">Date *</label>
+          <input
+            id="date"
+            type="date"
+            {...register('date')}
+            className={`border rounded p-2 focus:outline-none focus:ring-2 ${errors.date ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-blue-200'}`}
+          />
+          {errors.date && <span className="text-red-500 text-sm mt-1">{errors.date?.message}</span>}
+        </div>
+
+        <div className="flex flex-col">
+          <label htmlFor="time" className="mb-1 font-medium text-gray-700">Time *</label>
+          <input
+            id="time"
+            type="time"
+            {...register('time')}
+            className={`border rounded p-2 focus:outline-none focus:ring-2 ${errors.time ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-blue-200'}`}
+          />
+          {errors.time && <span className="text-red-500 text-sm mt-1">{errors.time?.message}</span>}
+        </div>
+
+        <div className="flex flex-col">
+          <label htmlFor="location" className="mb-1 font-medium text-gray-700">Location *</label>
+          <input
+            id="location"
+            type="text"
+            {...register('location')}
+            className={`border rounded p-2 focus:outline-none focus:ring-2 ${errors.location ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-blue-200'}`}
+          />
+          {errors.location && <span className="text-red-500 text-sm mt-1">{errors.location?.message}</span>}
+        </div>
+
+        <div className="flex flex-col">
+          <label htmlFor="capacity" className="mb-1 font-medium text-gray-700">Capacity (Optional)</label>
+          <input
+            id="capacity"
+            type="number"
+            min="1"
+            {...register('capacity', { valueAsNumber: true })}
+            placeholder="Leave empty for unlimited"
+            className={`border rounded p-2 focus:outline-none focus:ring-2 ${errors.capacity ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-blue-200'}`}
+          />
+          {errors.capacity && <span className="text-red-500 text-sm mt-1">{errors.capacity?.message}</span>}
+        </div>
+
+        <div className="flex flex-col">
+          <label className="mb-1 font-medium text-gray-700">Visibility</label>
+          <div className="flex gap-4">
+            <label className="inline-flex items-center gap-2 text-gray-700">
+              <input type="radio" value="true" {...register('isPublic')} />
+              Public
+            </label>
+            <label className="inline-flex items-center gap-2 text-gray-700">
+              <input type="radio" value="false" {...register('isPublic')} />
+              Private
+            </label>
+          </div>
+          {errors.isPublic && <span className="text-red-500 text-sm mt-1">{errors.isPublic?.message}</span>}
+        </div>
+
+        {submitError && (
+          <div className="rounded-md bg-red-50 border border-red-200 text-red-700 px-3 py-2 text-sm">
+            {submitError}
           </div>
         )}
 
-        <div className="mb-4">
-          <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
-            Event Title
-          </label>
-          <input
-            type="text"
-            id="title"
-            name="title"
-            value={formData.title}
-            onChange={handleChange}
-            required
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
-            placeholder="Enter event title"
-          />
-        </div>
-
-        <div className="mb-4">
-          <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
-            Description
-          </label>
-          <textarea
-            id="description"
-            name="description"
-            value={formData.description}
-            onChange={handleChange}
-            required
-            rows={4}
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
-            placeholder="Describe your event"
-          />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div>
-            <label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-2">
-              Date
-            </label>
-            <input
-              type="date"
-              id="date"
-              name="date"
-              value={formData.date}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
-            />
-          </div>
-          <div>
-            <label htmlFor="time" className="block text-sm font-medium text-gray-700 mb-2">
-              Time
-            </label>
-            <input
-              type="time"
-              id="time"
-              name="time"
-              value={formData.time}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
-            />
-          </div>
-        </div>
-
-        <div className="mb-4">
-          <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-2">
-            Location
-          </label>
-          <input
-            type="text"
-            id="location"
-            name="location"
-            value={formData.location}
-            onChange={handleChange}
-            required
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
-            placeholder="Enter event location"
-          />
-        </div>
-
-        <div className="mb-4">
-          <label htmlFor="capacity" className="block text-sm font-medium text-gray-700 mb-2">
-            Capacity (optional)
-          </label>
-          <input
-            type="number"
-            id="capacity"
-            name="capacity"
-            value={formData.capacity}
-            onChange={handleChange}
-            min="1"
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
-            placeholder="Leave empty for unlimited"
-          />
-        </div>
-
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Visibility
-          </label>
-          <div className="flex space-x-4">
-            <label className="flex items-center">
-              <input
-                type="radio"
-                name="isPublic"
-                value="true"
-                checked={formData.isPublic === true}
-                onChange={() => setFormData(prev => ({ ...prev, isPublic: true }))}
-                className="mr-2"
-              />
-              <span className="text-gray-700">Public</span>
-            </label>
-            <label className="flex items-center">
-              <input
-                type="radio"
-                name="isPublic"
-                value="false"
-                checked={formData.isPublic === false}
-                onChange={() => setFormData(prev => ({ ...prev, isPublic: false }))}
-                className="mr-2"
-              />
-              <span className="text-gray-700">Private</span>
-            </label>
-          </div>
-        </div>
-
         <button
           type="submit"
-          disabled={loading}
-          className="w-full bg-primary text-white py-3 px-4 rounded-lg font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+          disabled={isSubmitting}
+          className="bg-blue-600 text-white font-bold py-2 px-4 rounded mt-4 hover:bg-blue-700 transition disabled:opacity-50"
         >
-          {loading ? 'Creating...' : 'Create Event'}
+          {isSubmitting ? 'Creating...' : 'Create Event'}
         </button>
       </form>
     </div>

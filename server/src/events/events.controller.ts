@@ -1,9 +1,24 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  UsePipes,
+  UseGuards,
+  Request,
+  Get,
+  Param,
+  ParseIntPipe,
+  Query,
+  Patch,
+  Delete,
+} from '@nestjs/common';
 import { EventsService } from './events.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
+import { YupValidationPipe } from '../common/pipes/yup-validation.pipe';
+import { createEventSchema, updateEventSchema } from './schemas/event.schema';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 @ApiTags('Events')
 @Controller('events')
@@ -14,61 +29,57 @@ export class EventsController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create new event' })
-  create(@Body() createEventDto: CreateEventDto, @Request() req) {
+  @UsePipes(new YupValidationPipe(createEventSchema))
+  async create(@Body() createEventDto: CreateEventDto, @Request() req: { user: { id: number } }) {
     return this.eventsService.create(createEventDto, req.user.id);
   }
 
   @Get()
   @ApiOperation({ summary: 'Fetch public events' })
-  findAll(@Request() req) {
-    const user = req.user || null;
-    return this.eventsService.findAll(user);
-  }
-
-  @Get('users/me/events')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: "Fetch user's events (calendar)" })
-  getUserEvents(@Request() req) {
-    return this.eventsService.getUserEvents(req.user.id);
+  async findAll(@Query('search') search?: string) {
+    return this.eventsService.findAll(undefined, search);
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Fetch single event' })
-  findOne(@Param('id') id: string, @Request() req) {
-    const user = req.user || null;
-    return this.eventsService.findOne(+id, user);
+  async findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.eventsService.findOne(id);
   }
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Edit event' })
-  update(@Param('id') id: string, @Body() updateEventDto: UpdateEventDto, @Request() req) {
-    return this.eventsService.update(+id, updateEventDto, req.user.id);
+  @UsePipes(new YupValidationPipe(updateEventSchema))
+  async update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateEventDto: UpdateEventDto,
+    @Request() req: { user: { id: number } },
+  ) {
+    return this.eventsService.update(id, updateEventDto, req.user.id);
   }
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete event' })
-  remove(@Param('id') id: string, @Request() req) {
-    return this.eventsService.remove(+id, req.user.id);
+  async remove(@Param('id', ParseIntPipe) id: number, @Request() req: { user: { id: number } }) {
+    return this.eventsService.remove(id, req.user.id);
   }
 
   @Post(':id/join')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Join event' })
-  join(@Param('id') id: string, @Request() req) {
-    return this.eventsService.join(+id, req.user.id);
+  async join(@Param('id', ParseIntPipe) id: number, @Request() req: { user: { id: number } }) {
+    return this.eventsService.join(id, req.user.id);
   }
 
   @Post(':id/leave')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Leave event' })
-  leave(@Param('id') id: string, @Request() req) {
-    return this.eventsService.leave(+id, req.user.id);
+  async leave(@Param('id', ParseIntPipe) id: number, @Request() req: { user: { id: number } }) {
+    return this.eventsService.leave(id, req.user.id);
   }
 }

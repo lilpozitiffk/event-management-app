@@ -1,17 +1,17 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { eventsApi, Event } from '../services/events.service';
-import { useAuth } from '../context/AuthContext';
 import { Calendar, Clock, MapPin, Users, LayoutList, CalendarDays } from 'lucide-react';
 
 type ViewMode = 'list' | 'calendar';
+type CalendarMode = 'month' | 'week';
 
 export default function MyEvents() {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
-  const [currentMonth, setCurrentMonth] = useState(new Date());
-  const { user } = useAuth();
+  const [calendarMode, setCalendarMode] = useState<CalendarMode>('month');
+  const [currentDate, setCurrentDate] = useState(new Date());
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -38,19 +38,67 @@ export default function MyEvents() {
     return new Date(year, month, 1).getDay();
   };
 
-  const getEventsForDay = (day: number) => {
-    const year = currentMonth.getFullYear();
-    const month = currentMonth.getMonth();
-    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    return events.filter(event => event.date === dateStr);
+  const getDateKey = (date: Date) => {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
   };
 
-  const prevMonth = () => {
-    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
+  const getEventsForDate = (date: Date) => {
+    const dateStr = getDateKey(date);
+    return events.filter((event) => event.date === dateStr);
   };
 
-  const nextMonth = () => {
-    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
+  const getWeekStart = (date: Date) => {
+    const result = new Date(date);
+    result.setHours(0, 0, 0, 0);
+    result.setDate(result.getDate() - result.getDay());
+    return result;
+  };
+
+  const getWeekDays = (date: Date) => {
+    const start = getWeekStart(date);
+    return Array.from({ length: 7 }).map((_, index) => {
+      const day = new Date(start);
+      day.setDate(start.getDate() + index);
+      return day;
+    });
+  };
+
+  const getTimeRange = (time: string) => {
+    const [hours, minutes] = time.split(':').map(Number);
+    if (Number.isNaN(hours) || Number.isNaN(minutes)) {
+      return time;
+    }
+
+    const start = new Date();
+    start.setHours(hours, minutes, 0, 0);
+
+    const end = new Date(start);
+    end.setHours(end.getHours() + 1);
+
+    const format = (date: Date) =>
+      `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+
+    return `${format(start)} - ${format(end)}`;
+  };
+
+  const prevPeriod = () => {
+    if (calendarMode === 'month') {
+      setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+      return;
+    }
+    const prev = new Date(currentDate);
+    prev.setDate(prev.getDate() - 7);
+    setCurrentDate(prev);
+  };
+
+  const nextPeriod = () => {
+    if (calendarMode === 'month') {
+      setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+      return;
+    }
+    const next = new Date(currentDate);
+    next.setDate(next.getDate() + 7);
+    setCurrentDate(next);
   };
 
   if (loading) {
@@ -100,11 +148,9 @@ export default function MyEvents() {
           <h2 className="text-xl font-semibold text-gray-900 mb-2">
             You are not part of any events yet
           </h2>
-          <p className="text-gray-500 mb-6">
-            Explore public events and join
-          </p>
+          <p className="text-gray-500 mb-6">Explore public events and join.</p>
           <button
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/events')}
             className="bg-primary text-white px-6 py-2 rounded-lg hover:bg-indigo-700"
           >
             Browse Events
@@ -146,56 +192,129 @@ export default function MyEvents() {
         </div>
       ) : (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <div className="flex justify-between items-center mb-6">
-            <button
-              onClick={prevMonth}
-              className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
-            >
-              Previous
-            </button>
-            <h2 className="text-xl font-bold text-gray-900">
-              {currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}
-            </h2>
-            <button
-              onClick={nextMonth}
-              className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
-            >
-              Next
-            </button>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+            <div className="flex gap-2">
+              <button
+                onClick={() => setCalendarMode('month')}
+                className={`px-4 py-2 rounded-lg transition ${
+                  calendarMode === 'month'
+                    ? 'bg-primary text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                Month
+              </button>
+              <button
+                onClick={() => setCalendarMode('week')}
+                className={`px-4 py-2 rounded-lg transition ${
+                  calendarMode === 'week'
+                    ? 'bg-primary text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                Week
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between md:justify-end gap-2">
+              <button
+                onClick={prevPeriod}
+                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+              >
+                Previous
+              </button>
+              <h2 className="text-base md:text-xl font-bold text-gray-900 min-w-52 text-center">
+                {calendarMode === 'month'
+                  ? currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })
+                  : `${getWeekDays(currentDate)[0].toLocaleDateString()} - ${getWeekDays(currentDate)[6].toLocaleDateString()}`}
+              </h2>
+              <button
+                onClick={nextPeriod}
+                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+              >
+                Next
+              </button>
+            </div>
           </div>
-          <div className="grid grid-cols-7 gap-1">
-            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-              <div key={day} className="text-center text-sm font-medium text-gray-500 py-2">
-                {day}
-              </div>
-            ))}
-            {Array.from({ length: getFirstDayOfMonth(currentMonth.getFullYear(), currentMonth.getMonth()) }).map((_, i) => (
-              <div key={`empty-${i}`} className="p-2" />
-            ))}
-            {Array.from({ length: getDaysInMonth(currentMonth.getFullYear(), currentMonth.getMonth()) }).map((_, i) => {
-              const day = i + 1;
-              const dayEvents = getEventsForDay(day);
-              return (
-                <div
-                  key={day}
-                  className={`p-2 min-h-24 border rounded-lg ${
-                    dayEvents.length > 0 ? 'bg-indigo-50 border-indigo-200' : 'bg-white'
-                  }`}
-                >
-                  <div className="text-sm font-medium text-gray-700 mb-1">{day}</div>
-                  {dayEvents.map(event => (
-                    <div
-                      key={event.id}
-                      onClick={() => navigate(`/events/${event.id}`)}
-                      className="text-xs bg-primary text-white px-2 py-1 rounded mb-1 cursor-pointer truncate"
-                    >
-                      {event.title}
-                    </div>
-                  ))}
+
+          {calendarMode === 'month' ? (
+            <div className="grid grid-cols-7 gap-1">
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+                <div key={day} className="text-center text-sm font-medium text-gray-500 py-2">
+                  {day}
                 </div>
-              );
-            })}
-          </div>
+              ))}
+              {Array.from({
+                length: getFirstDayOfMonth(currentDate.getFullYear(), currentDate.getMonth()),
+              }).map((_, i) => (
+                <div key={`empty-${i}`} className="p-2" />
+              ))}
+              {Array.from({ length: getDaysInMonth(currentDate.getFullYear(), currentDate.getMonth()) }).map((_, i) => {
+                const day = i + 1;
+                const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+                const dayEvents = getEventsForDate(date);
+
+                return (
+                  <div
+                    key={day}
+                    className={`p-2 min-h-28 border rounded-lg ${
+                      dayEvents.length > 0 ? 'bg-indigo-50 border-indigo-200' : 'bg-white'
+                    }`}
+                  >
+                    <div className="text-sm font-medium text-gray-700 mb-1">{day}</div>
+                    {dayEvents.map((event) => (
+                      <div
+                        key={event.id}
+                        onClick={() => navigate(`/events/${event.id}`)}
+                        className="text-xs bg-primary text-white px-2 py-1 rounded mb-1 cursor-pointer"
+                      >
+                        <div className="truncate">{event.title}</div>
+                        <div className="opacity-90">{getTimeRange(event.time)}</div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <div className="grid grid-cols-7 gap-2 min-w-[760px]">
+                {getWeekDays(currentDate).map((day) => {
+                  const dayEvents = getEventsForDate(day);
+                  return (
+                    <div
+                      key={day.toISOString()}
+                      className={`p-3 min-h-56 border rounded-lg ${
+                        dayEvents.length > 0 ? 'bg-indigo-50 border-indigo-200' : 'bg-white'
+                      }`}
+                    >
+                      <div className="text-xs text-gray-500 mb-1">
+                        {day.toLocaleDateString('default', { weekday: 'short' })}
+                      </div>
+                      <div className="text-sm font-semibold text-gray-800 mb-3">
+                        {day.getDate()}
+                      </div>
+                      <div className="space-y-2">
+                        {dayEvents.map((event) => (
+                          <div
+                            key={event.id}
+                            onClick={() => navigate(`/events/${event.id}`)}
+                            className="text-xs bg-primary text-white px-2 py-2 rounded cursor-pointer"
+                          >
+                            <div className="font-medium truncate">{event.title}</div>
+                            <div className="opacity-90 mt-0.5">{getTimeRange(event.time)}</div>
+                          </div>
+                        ))}
+                        {dayEvents.length === 0 && (
+                          <div className="text-xs text-gray-400">No events</div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

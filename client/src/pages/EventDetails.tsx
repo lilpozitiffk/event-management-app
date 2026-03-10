@@ -13,6 +13,8 @@ export default function EventDetails() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => {
     fetchEventDetails();
@@ -53,15 +55,18 @@ export default function EventDetails() {
     }
   };
 
-  const handleDelete = async () => {
+  const handleDeleteConfirmed = async () => {
     if (!event) return;
-    if (!confirm('Are you sure you want to delete this event?')) return;
     try {
+      setDeleteLoading(true);
       const eventId = event.id;
       await eventsApi.delete(eventId);
-      navigate('/');
+      setShowDeleteModal(false);
+      navigate('/events');
     } catch (err: any) {
       alert('Failed to delete event');
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -112,7 +117,7 @@ export default function EventDetails() {
               <Edit className="w-4 h-4 mr-2" /> Edit
             </button>
             <button 
-              onClick={handleDelete}
+              onClick={() => setShowDeleteModal(true)}
               className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
             >
               <Trash2 className="w-4 h-4 mr-2" /> Delete
@@ -204,6 +209,31 @@ export default function EventDetails() {
           <p className="text-gray-500">No participants yet. Be the first to join!</p>
         )}
       </div>
+
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-md bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Event</h3>
+            <p className="text-gray-600 mb-6">Are you sure you want to delete this event?</p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                disabled={deleteLoading}
+                className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteConfirmed}
+                disabled={deleteLoading}
+                className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {deleteLoading ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
