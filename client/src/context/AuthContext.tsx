@@ -25,35 +25,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const userData = localStorage.getItem('user');
     if (token && userData) {
       setUser(JSON.parse(userData));
-      console.log('User restored from localStorage:', JSON.parse(userData));
     }
   }, []);
 
   const login = async (email: string, password: string) => {
     const { data } = await api.post('/auth/login', { email, password });
-    
     localStorage.setItem('token', data.access_token);
     localStorage.setItem('user', JSON.stringify(data.user));
-    
     setUser(data.user);
-    console.log('Login successful, token saved:', !!data.access_token);
   };
 
   const register = async (name: string, email: string, password: string) => {
     const { data } = await api.post('/auth/register', { name, email, password });
-    
     localStorage.setItem('token', data.access_token);
     localStorage.setItem('user', JSON.stringify(data.user));
-    
     setUser(data.user);
-    console.log('Register successful, token saved:', !!data.access_token);
   };
 
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
-    console.log('User logged out, localStorage cleared');
   };
 
   const isAuthenticated = !!user;

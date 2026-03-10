@@ -37,7 +37,7 @@ services:
     volumes:
       - ./server:/app
       - /app/node_modules
-    command: sh -c "npm install && sleep 5 && npm run seed && npm run start:dev"
+    command: sh -c "npm install && sleep 5 && (npm run seed || true) && npm run start:dev"
 
   frontend:
     build:

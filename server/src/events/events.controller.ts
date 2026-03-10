@@ -25,6 +25,14 @@ export class EventsController {
     return this.eventsService.findAll(user);
   }
 
+  @Get('users/me/events')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Fetch user's events (calendar)" })
+  getUserEvents(@Request() req) {
+    return this.eventsService.getUserEvents(req.user.id);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Fetch single event' })
   findOne(@Param('id') id: string, @Request() req) {
@@ -62,13 +70,5 @@ export class EventsController {
   @ApiOperation({ summary: 'Leave event' })
   leave(@Param('id') id: string, @Request() req) {
     return this.eventsService.leave(+id, req.user.id);
-  }
-
-  @Get('users/me/events')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: "Fetch user's events (calendar)" })
-  getUserEvents(@Request() req) {
-    return this.eventsService.getUserEvents(req.user.id);
   }
 }

@@ -20,17 +20,14 @@ export class EventsService {
     if (eventDateTime < new Date()) {
       throw new BadRequestException('Cannot create events in the past');
     }
-
     const organizer = await this.usersRepository.findOne({ where: { id: userId } });
     if (!organizer) {
       throw new NotFoundException(`User #${userId} not found`);
     }
-
     const newEvent = this.eventsRepository.create({
       ...createEventDto,
       organizer,
     });
-
     return this.eventsRepository.save(newEvent);
   }
 
@@ -40,7 +37,6 @@ export class EventsService {
       relations: ['participants', 'organizer'],
       order: { date: 'ASC' },
     });
-
     return events.map(event => {
       const isFull = event.capacity && event.participants.length >= event.capacity;
       const isJoined = user ? event.participants.some(p => p.id === user.id) : false;
@@ -60,13 +56,10 @@ export class EventsService {
       where: { id },
       relations: ['participants', 'organizer'],
     });
-
     if (!event) throw new NotFoundException(`Event #${id} not found`);
-
     const isFull = event.capacity && event.participants.length >= event.capacity;
     const isJoined = user ? event.participants.some(p => p.id === user.id) : false;
     const isOrganizer = user ? user.id === event.organizer.id : false;
-
     return {
       ...event,
       participantsCount: event.participants.length,
@@ -85,7 +78,6 @@ export class EventsService {
       .orWhere('event.organizerId = :userId', { userId })
       .orderBy('event.date', 'ASC')
       .getMany();
-
     return events.map(event => {
       const isFull = event.capacity && event.participants.length >= event.capacity;
       const isOrganizer = event.organizer.id === userId;
@@ -104,26 +96,20 @@ export class EventsService {
       where: { id: eventId },
       relations: ['participants', 'organizer']
     });
-
     if (!event) throw new NotFoundException('Event not found');
-    
     if (event.organizer.id === userId) {
       throw new ConflictException('Organizer cannot join their own event');
     }
-    
     if (event.capacity && event.participants.length >= event.capacity) {
       throw new ConflictException('Event is full');
     }
-
     const isJoined = event.participants.some(p => p.id === userId);
     if (isJoined) throw new ConflictException('Already joined');
-
     await this.eventsRepository
       .createQueryBuilder()
       .relation(Event, "participants")
       .of(eventId)
       .add(userId);
-
     return this.findOne(eventId, { id: userId } as User);
   }
 
@@ -132,18 +118,14 @@ export class EventsService {
       where: { id: eventId },
       relations: ['participants']
     });
-
     if (!event) throw new NotFoundException('Event not found');
-
     const isJoined = event.participants.some(p => p.id === userId);
     if (!isJoined) throw new ConflictException('Not joined yet');
-
     await this.eventsRepository
       .createQueryBuilder()
       .relation(Event, "participants")
       .of(eventId)
       .remove(userId);
-
     return this.findOne(eventId, { id: userId } as User);
   }
 
@@ -152,7 +134,6 @@ export class EventsService {
     if (event.organizer.id !== userId) {
       throw new BadRequestException('You are not the organizer');
     }
-
     await this.eventsRepository.update(id, updateEventDto);
     return this.findOne(id);
   }
@@ -162,7 +143,6 @@ export class EventsService {
     if (event.organizer.id !== userId) {
       throw new BadRequestException('You are not the organizer');
     }
-
     await this.eventsRepository.delete(id);
   }
 }

@@ -90,6 +90,8 @@ export default function EventDetails() {
     );
   }
 
+  const isOrganizer = event.isOrganizer || (user && event.organizer && user.id === event.organizer.id);
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <button 
@@ -101,7 +103,7 @@ export default function EventDetails() {
 
       <div className="flex justify-between items-start mb-6">
         <h1 className="text-3xl font-bold text-gray-900">{event.title}</h1>
-        {event.isOrganizer && (
+        {isOrganizer && (
           <div className="flex space-x-2">
             <button 
               onClick={() => navigate(`/events/${event.id}/edit`)}
@@ -154,7 +156,7 @@ export default function EventDetails() {
           </div>
         </div>
 
-        {!event.isOrganizer && (
+        {!isOrganizer && (
           <button
             onClick={handleJoinLeave}
             disabled={(event.isFull && !event.isJoined) || actionLoading}
@@ -176,7 +178,7 @@ export default function EventDetails() {
           </button>
         )}
 
-        {event.isOrganizer && (
+        {isOrganizer && (
           <div className="w-full py-3 px-4 rounded-lg bg-gray-100 text-gray-500 text-center font-medium">
             You are the organizer
           </div>
