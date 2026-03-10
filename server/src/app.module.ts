@@ -12,7 +12,7 @@ import { EventsModule } from './events/events.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
-      isGlobal: true, 
+      isGlobal: true,
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
@@ -28,7 +28,7 @@ import { EventsModule } from './events/events.module';
         synchronize: true,
       }),
     }),
-    UsersModule, 
+    UsersModule,
     AuthModule,
     EventsModule,
   ],

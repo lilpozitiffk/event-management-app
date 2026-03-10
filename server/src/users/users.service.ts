@@ -17,23 +17,20 @@ export class UsersService {
     if (existingUser) {
       throw new ConflictException('Email already exists');
     }
-
     const salt = await bcrypt.genSalt();
     const hashedPassword = await bcrypt.hash(createUserDto.password, salt);
-
     const user = this.usersRepository.create({
       ...createUserDto,
       password: hashedPassword,
     });
-
     return this.usersRepository.save(user);
   }
 
   async findOne(email: string): Promise<User | null> {
     return await this.usersRepository.findOne({ where: { email } });
   }
-  
+
   async findById(id: number): Promise<User | null> {
-      return await this.usersRepository.findOne({ where: { id } });
+    return await this.usersRepository.findOne({ where: { id } });
   }
 }

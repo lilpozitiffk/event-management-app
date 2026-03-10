@@ -1,11 +1,9 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-// FIX: Point to shared entities folder
 import { Event } from '../entities/event.entity';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
-// FIX: Point to shared entities folder
 import { User } from '../entities/user.entity';
 
 @Injectable()
@@ -18,24 +16,23 @@ export class EventsService {
   ) {}
 
   async create(createEventDto: CreateEventDto, userId: number) {
-  const eventDateTime = new Date(`${createEventDto.date}T${createEventDto.time}`);
-  if (eventDateTime < new Date()) {
-    throw new BadRequestException('Cannot create events in the past');
+    const eventDateTime = new Date(`${createEventDto.date}T${createEventDto.time}`);
+    if (eventDateTime < new Date()) {
+      throw new BadRequestException('Cannot create events in the past');
+    }
+
+    const organizer = await this.usersRepository.findOne({ where: { id: userId } });
+    if (!organizer) {
+      throw new NotFoundException(`User #${userId} not found`);
+    }
+
+    const newEvent = this.eventsRepository.create({
+      ...createEventDto,
+      organizer,
+    });
+
+    return this.eventsRepository.save(newEvent);
   }
-
-  const organizer = await this.usersRepository.findOne({ where: { id: userId } });
-  
-  if (!organizer) {
-    throw new NotFoundException(`User #${userId} not found`);
-  }
-
-  const newEvent = this.eventsRepository.create({
-    ...createEventDto,
-    organizer,
-  });
-  return this.eventsRepository.save(newEvent);
-}
-
 
   async findAll(user?: User) {
     const events = await this.eventsRepository.find({
@@ -47,12 +44,13 @@ export class EventsService {
     return events.map(event => {
       const isFull = event.capacity && event.participants.length >= event.capacity;
       const isJoined = user ? event.participants.some(p => p.id === user.id) : false;
-
+      const isOrganizer = user ? user.id === event.organizer.id : false;
       return {
         ...event,
         participantsCount: event.participants.length,
         isJoined,
         isFull,
+        isOrganizer,
       };
     });
   }
@@ -78,32 +76,61 @@ export class EventsService {
     };
   }
 
-  async join(eventId: number, userId: number) {
-    // We need to fetch the event again to check status fresh
-    const event = await this.eventsRepository.findOne({
-        where: { id: eventId },
-        relations: ['participants']
+  async getUserEvents(userId: number) {
+    const events = await this.eventsRepository
+      .createQueryBuilder('event')
+      .leftJoinAndSelect('event.participants', 'participant')
+      .leftJoinAndSelect('event.organizer', 'organizer')
+      .where('participant.id = :userId', { userId })
+      .orWhere('event.organizerId = :userId', { userId })
+      .orderBy('event.date', 'ASC')
+      .getMany();
+
+    return events.map(event => {
+      const isFull = event.capacity && event.participants.length >= event.capacity;
+      const isOrganizer = event.organizer.id === userId;
+      return {
+        ...event,
+        participantsCount: event.participants.length,
+        isJoined: !isOrganizer,
+        isFull,
+        isOrganizer,
+      };
     });
-    
+  }
+
+  async join(eventId: number, userId: number) {
+    const event = await this.eventsRepository.findOne({
+      where: { id: eventId },
+      relations: ['participants', 'organizer']
+    });
+
     if (!event) throw new NotFoundException('Event not found');
-    if (event.capacity && event.participants.length >= event.capacity) throw new ConflictException('Event is full');
     
+    if (event.organizer.id === userId) {
+      throw new ConflictException('Organizer cannot join their own event');
+    }
+    
+    if (event.capacity && event.participants.length >= event.capacity) {
+      throw new ConflictException('Event is full');
+    }
+
     const isJoined = event.participants.some(p => p.id === userId);
     if (isJoined) throw new ConflictException('Already joined');
 
     await this.eventsRepository
-        .createQueryBuilder()
-        .relation(Event, "participants")
-        .of(eventId)
-        .add(userId);
+      .createQueryBuilder()
+      .relation(Event, "participants")
+      .of(eventId)
+      .add(userId);
 
-    return this.findOne(eventId);
+    return this.findOne(eventId, { id: userId } as User);
   }
 
   async leave(eventId: number, userId: number) {
     const event = await this.eventsRepository.findOne({
-        where: { id: eventId },
-        relations: ['participants']
+      where: { id: eventId },
+      relations: ['participants']
     });
 
     if (!event) throw new NotFoundException('Event not found');
@@ -112,12 +139,12 @@ export class EventsService {
     if (!isJoined) throw new ConflictException('Not joined yet');
 
     await this.eventsRepository
-        .createQueryBuilder()
-        .relation(Event, "participants")
-        .of(eventId)
-        .remove(userId);
+      .createQueryBuilder()
+      .relation(Event, "participants")
+      .of(eventId)
+      .remove(userId);
 
-    return this.findOne(eventId);
+    return this.findOne(eventId, { id: userId } as User);
   }
 
   async update(id: number, updateEventDto: UpdateEventDto, userId: number) {
@@ -125,6 +152,7 @@ export class EventsService {
     if (event.organizer.id !== userId) {
       throw new BadRequestException('You are not the organizer');
     }
+
     await this.eventsRepository.update(id, updateEventDto);
     return this.findOne(id);
   }
@@ -134,6 +162,7 @@ export class EventsService {
     if (event.organizer.id !== userId) {
       throw new BadRequestException('You are not the organizer');
     }
+
     await this.eventsRepository.delete(id);
   }
 }

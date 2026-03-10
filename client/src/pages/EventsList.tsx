@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 export default function EventsList() {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -17,7 +17,6 @@ export default function EventsList() {
     try {
       const data = await eventsApi.getAll();
       setEvents(data);
-      console.log('Events loaded:', data);
     } catch (error) {
       console.error('Failed to fetch events', error);
     } finally {
@@ -27,25 +26,46 @@ export default function EventsList() {
 
   const handleJoin = async (e: React.MouseEvent, id: number) => {
     e.stopPropagation();
-    if (!isAuthenticated) {
+    
+    if (!isAuthenticated || !user) {
       alert('Please login to join events');
       navigate('/login');
       return;
     }
+
     try {
       await eventsApi.join(id);
       fetchEvents();
     } catch (error: any) {
+      if (error.response?.status === 401) {
+        alert('Session expired. Please login again.');
+        logout();
+        navigate('/login');
+        return;
+      }
       alert(error.response?.data?.message || 'Failed to join event');
     }
   };
 
   const handleLeave = async (e: React.MouseEvent, id: number) => {
     e.stopPropagation();
+    
+    if (!isAuthenticated || !user) {
+      alert('Please login to leave events');
+      navigate('/login');
+      return;
+    }
+
     try {
       await eventsApi.leave(id);
       fetchEvents();
     } catch (error: any) {
+      if (error.response?.status === 401) {
+        alert('Session expired. Please login again.');
+        logout();
+        navigate('/login');
+        return;
+      }
       alert(error.response?.data?.message || 'Failed to leave event');
     }
   };
@@ -105,23 +125,27 @@ export default function EventsList() {
               </div>
 
               <button
-                onClick={(e) =>
-                  event.isJoined ? handleLeave(e, event.id) : handleJoin(e, event.id)
-                }
-                disabled={event.isFull && !event.isJoined}
-                className={`w-full py-2 px-4 rounded-lg font-medium transition ${
-                  event.isFull && !event.isJoined
-                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                    : event.isJoined
-                    ? 'bg-white border border-red-500 text-red-500 hover:bg-red-50'
-                    : 'bg-green-600 text-white hover:bg-green-700'
-                }`}
-              >
-                {event.isFull && !event.isJoined
-                  ? 'Full'
-                  : event.isJoined
-                  ? 'Leave Event'
-                  : 'Join Event'}
+  onClick={(e) =>
+    event.isJoined ? handleLeave(e, event.id) : handleJoin(e, event.id)
+  }
+  disabled={(event.isFull && !event.isJoined) || event.isOrganizer}
+  className={`w-full py-2 px-4 rounded-lg font-medium transition ${
+    event.isOrganizer
+      ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
+      : event.isFull && !event.isJoined
+      ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+      : event.isJoined
+      ? 'bg-white border border-red-500 text-red-500 hover:bg-red-50'
+      : 'bg-green-600 text-white hover:bg-green-700'
+  }`}
+>
+  {event.isOrganizer
+    ? 'Organizer'
+    : event.isFull && !event.isJoined
+    ? 'Full'
+    : event.isJoined
+    ? 'Leave Event'
+    : 'Join Event'}
               </button>
             </div>
           ))}
