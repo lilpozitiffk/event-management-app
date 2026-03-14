@@ -42,6 +42,21 @@ FRONTEND_PORT
 VITE_API_URL
 ```
 
+## Deployment (Vercel + Fly.io + Neon)
+Production setup:
+- Frontend: Vercel
+- Backend: Fly.io
+- Database: Neon (Postgres)
+
+Steps (high level):
+1. Create a Neon project and copy the connection string.
+2. Deploy backend to Fly.io:
+   - Set secrets: `DATABASE_URL`, `JWT_SECRET`
+   - Deploy from `server` (`fly deploy`)
+3. Deploy frontend to Vercel:
+   - Set `VITE_API_URL` to `https://<fly-app>.fly.dev/api`
+   - Redeploy
+
 ## Notes
 - Backend container runs `npm run seed` on startup (if it fails, it continues).
 - Use `docker-compose down -v` to stop and reset the database.

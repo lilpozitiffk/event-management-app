@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
@@ -8,6 +8,11 @@ import EventDetails from './pages/EventDetails';
 import CreateEvent from './pages/CreateEvent';
 import EditEvent from './pages/EditEvent';
 import MyEvents from './pages/MyEvents';
+
+function RootRedirect() {
+  const { isAuthenticated } = useAuth();
+  return <Navigate to={isAuthenticated ? '/events' : '/login'} replace />;
+}
 
 function App() {
   return (
@@ -35,7 +40,7 @@ function App() {
                   <CreateEvent />
                 </ProtectedRoute>
               } />
-              <Route path="/" element={<Navigate to="/login" replace />} />
+              <Route path="/" element={<RootRedirect />} />
             </Routes>
           </main>
         </div>
