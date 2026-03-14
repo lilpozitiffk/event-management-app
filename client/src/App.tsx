@@ -35,7 +35,7 @@ function App() {
                   <CreateEvent />
                 </ProtectedRoute>
               } />
-              <Route path="/" element={<Navigate to="/events" replace />} />
+              <Route path="/" element={<Navigate to="/login" replace />} />
             </Routes>
           </main>
         </div>

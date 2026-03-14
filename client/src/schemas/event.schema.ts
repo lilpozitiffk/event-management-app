@@ -37,6 +37,7 @@ export const createEventSchema = yup.object({
   capacity: yup
     .number()
     .transform((value, originalValue) => {
+      if (Number.isNaN(value)) return null;
       return String(originalValue).trim() === '' ? null : value;
     })
     .nullable()
@@ -75,6 +76,7 @@ export const eventSchema = yup.object({
   capacity: yup
     .number()
     .transform((value, originalValue) => {
+      if (Number.isNaN(value)) return null;
       return String(originalValue).trim() === '' ? null : value;
     })
     .nullable()

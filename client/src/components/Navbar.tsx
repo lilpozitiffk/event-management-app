@@ -16,7 +16,7 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex items-center">
-            <Link to="/" className="text-xl font-bold text-gray-800">
+            <Link to="/events" className="text-xl font-bold text-gray-800">
               EventApp
             </Link>
           </div>
@@ -24,7 +24,7 @@ export default function Navbar() {
           <div className="flex items-center space-x-4">
             {user ? (
               <>
-                <Link to="/" className="flex items-center text-gray-600 hover:text-primary">
+                <Link to="/events" className="flex items-center text-gray-600 hover:text-primary">
                   <List className="w-4 h-4 mr-1" />
                   <span className="hidden sm:inline">Events</span>
                 </Link>
