@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
+import Register from './pages/Register';
 import EventsList from './pages/EventsList';
 import EventDetails from './pages/EventDetails';
 import CreateEvent from './pages/CreateEvent';

@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 export default function EventsList() {
     const [events, setEvents] = useState<Event[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
     const { user, isAuthenticated, logout } = useAuth();
     const navigate = useNavigate();
@@ -23,8 +24,9 @@ export default function EventsList() {
                 isOrganizer: user ? event.organizer?.id === user.id : false,
             }));
             setEvents(enrichedEvents);
+            setError('');
         } catch (error) {
-            console.error('Failed to fetch events', error);
+            setError('Failed to load events. Please try again later.');
         } finally {
             setLoading(false);
         }
@@ -101,6 +103,14 @@ export default function EventsList() {
                     className="w-full md:w-96 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
             </div>
+            {error && (
+                <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg flex items-center justify-between">
+                    <span>{error}</span>
+                    <button onClick={fetchEvents} className="ml-4 text-sm font-medium text-red-700 underline hover:text-red-800">
+                        Retry
+                    </button>
+                </div>
+            )}
             {filteredEvents.length === 0 ? (
                 <div className="text-center text-gray-500 py-12">
                     {searchQuery ? 'No events found matching your search' : 'No events available yet. Check back later!'}

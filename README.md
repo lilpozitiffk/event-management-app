@@ -57,6 +57,13 @@ Steps (high level):
    - Set `VITE_API_URL` to `https://<fly-app>.fly.dev/api`
    - Redeploy
 
+## Default Users (seeded automatically)
+Name        Email               Password      
+John Doe    john12@example.com password123 
+Jane Smith  jane@example.com   password123  
+
+You can log in with any of these credentials right after `docker-compose up`.
+
 ## Notes
 - Backend container runs `npm run seed` on startup (if it fails, it continues).
 - Use `docker-compose down -v` to stop and reset the database.

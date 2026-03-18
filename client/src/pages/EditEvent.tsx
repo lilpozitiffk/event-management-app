@@ -60,6 +60,7 @@ export default function EditEvent() {
       const eventData = {
         ...data,
         capacity: data.capacity || null,
+        isPublic: data.isPublic === true || data.isPublic === 'true',
       };
       await eventsApi.update(Number(id), eventData);
       navigate(`/events/${id}`);

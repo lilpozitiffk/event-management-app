@@ -28,7 +28,6 @@ export default function EventDetails() {
       setError('');
     } catch (err: any) {
       setError('Failed to load event details');
-      console.error(err);
     } finally {
       setLoading(false);
     }

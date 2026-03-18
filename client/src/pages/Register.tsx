@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import api from '../services/api';
 
 export default function Register() {
   const [name, setName] = useState('');
@@ -10,7 +9,7 @@ export default function Register() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
-  const { login } = useAuth();
+  const { register } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -19,11 +18,8 @@ export default function Register() {
     setIsLoading(true);
 
     try {
-      const response = await api.post('/auth/register', { name, email, password });
-      
-      login(response.data.access_token, response.data.user);
-      
-      navigate('/');
+      await register(name, email, password);
+      navigate('/events');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Registration failed. Please try again.');
     } finally {
@@ -40,7 +36,6 @@ export default function Register() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Name Input */}
           <div>
             <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
               Full Name
@@ -56,7 +51,6 @@ export default function Register() {
             />
           </div>
 
-          {/* Email Input */}
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
               Email Address
@@ -72,7 +66,6 @@ export default function Register() {
             />
           </div>
 
-          {/* Password Input */}
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
               Password
@@ -89,14 +82,12 @@ export default function Register() {
             />
           </div>
 
-          {/* Error Message */}
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm">
               {error}
             </div>
           )}
 
-          {/* Submit Button */}
           <button
             type="submit"
             disabled={isLoading}
@@ -106,7 +97,6 @@ export default function Register() {
           </button>
         </form>
 
-        {/* Login Link */}
         <div className="mt-6 text-center">
           <p className="text-gray-600">
             Already have an account?{' '}

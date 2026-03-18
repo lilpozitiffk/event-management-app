@@ -9,6 +9,7 @@ type CalendarMode = 'month' | 'week';
 export default function MyEvents() {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [calendarMode, setCalendarMode] = useState<CalendarMode>('month');
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -23,8 +24,9 @@ export default function MyEvents() {
       setLoading(true);
       const data = await eventsApi.getMyEvents();
       setEvents(data);
+      setError('');
     } catch (error) {
-      console.error('Failed to fetch my events', error);
+      setError('Failed to load your events. Please try again later.');
     } finally {
       setLoading(false);
     }
@@ -142,7 +144,16 @@ export default function MyEvents() {
         </div>
       </div>
 
-      {events.length === 0 ? (
+      {error && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg flex items-center justify-between">
+          <span>{error}</span>
+          <button onClick={fetchMyEvents} className="ml-4 text-sm font-medium text-red-700 underline hover:text-red-800">
+            Retry
+          </button>
+        </div>
+      )}
+
+      {events.length === 0 && !error ? (
         <div className="text-center py-12 bg-white rounded-xl shadow-sm border border-gray-100">
           <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-gray-900 mb-2">
