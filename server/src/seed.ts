@@ -2,6 +2,9 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { UsersService } from './users/users.service';
 import { EventsService } from './events/events.service';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Tag } from './entities/tag.entity';
 
 async function bootstrap() {
   const app = await NestFactory.createApplicationContext(AppModule);
@@ -22,6 +25,14 @@ async function bootstrap() {
 
   console.log('Users created:', user1.email, user2.email);
 
+  // Create tags
+  const tagRepo = app.get<Repository<Tag>>(getRepositoryToken(Tag));
+  const tagNames = ['tech', 'art', 'business', 'music', 'sports', 'education'];
+  const tags = await tagRepo.save(tagNames.map(name => tagRepo.create({ name })));
+  console.log('Tags created:', tags.map(t => t.name).join(', '));
+
+  const tagMap = Object.fromEntries(tags.map(t => [t.name, t.id]));
+
   const event1 = await eventsService.create(
     {
       title: 'Tech Conference 2026',
@@ -31,6 +42,7 @@ async function bootstrap() {
       location: 'Convention Center, San Francisco',
       capacity: 500,
       isPublic: true,
+      tagIds: [tagMap.tech, tagMap.business],
     },
     user1.id
   );
@@ -44,6 +56,7 @@ async function bootstrap() {
       location: 'Downtown Coffee Shop',
       capacity: 30,
       isPublic: true,
+      tagIds: [tagMap.business],
     },
     user2.id
   );
@@ -57,6 +70,7 @@ async function bootstrap() {
       location: 'Creative Space Studio',
       capacity: 20,
       isPublic: true,
+      tagIds: [tagMap.art, tagMap.tech],
     },
     user1.id
   );

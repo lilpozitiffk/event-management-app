@@ -31,6 +31,7 @@ services:
       DB_NAME: ${DB_NAME:-eventdb}
       JWT_SECRET: ${JWT_SECRET:-supersecretkey123}
       PORT: ${PORT:-3000}
+      NODE_ENV: development
     depends_on:
       postgres:
         condition: service_healthy

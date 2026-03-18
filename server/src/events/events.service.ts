@@ -6,6 +6,7 @@ import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { User } from '../entities/user.entity';
 import { EventResponseDto, EventUserDto } from './dto/event-response.dto';
+import { TagsService } from '../tags/tags.service';
 
 @Injectable()
 export class EventsService {
@@ -14,6 +15,7 @@ export class EventsService {
         private eventsRepository: Repository<Event>,
         @InjectRepository(User)
         private usersRepository: Repository<User>,
+        private tagsService: TagsService,
     ) {}
 
     private mapEvent(event: Event, user?: User): EventResponseDto {
@@ -44,6 +46,7 @@ export class EventsService {
             isOrganizer,
             organizer,
             participants,
+            tags: (event.tags || []).map(t => ({ id: t.id, name: t.name })),
         };
     }
 
@@ -56,11 +59,15 @@ export class EventsService {
         if (!organizer) {
             throw new NotFoundException(`User #${userId} not found`);
         }
+        const { tagIds, ...eventData } = createEventDto;
         const newEvent = this.eventsRepository.create({
-            ...createEventDto,
-            description: createEventDto.description?.trim() || 'No description provided',
+            ...eventData,
+            description: eventData.description?.trim() || 'No description provided',
             organizer,
         });
+        if (tagIds?.length) {
+            newEvent.tags = await this.tagsService.findByIds(tagIds);
+        }
         const saved = await this.eventsRepository.save(newEvent);
         const event = await this.eventsRepository.findOne({
             where: { id: saved.id },
@@ -72,11 +79,12 @@ export class EventsService {
         return this.mapEvent(event, organizer);
     }
 
-    async findAll(user?: User, search?: string) {
+    async findAll(user?: User, search?: string, tags?: string) {
         const queryBuilder = this.eventsRepository
             .createQueryBuilder('event')
             .leftJoinAndSelect('event.participants', 'participant')
             .leftJoinAndSelect('event.organizer', 'organizer')
+            .leftJoinAndSelect('event.tags', 'tag')
             .where('event.isPublic = :isPublic', { isPublic: true });
 
         if (search) {
@@ -84,6 +92,15 @@ export class EventsService {
                 '(event.title ILIKE :search OR event.description ILIKE :search OR event.location ILIKE :search)',
                 { search: `%${search}%` }
             );
+        }
+
+        if (tags) {
+            const tagIds = tags.split(',').map(Number).filter(Boolean);
+            if (tagIds.length > 0) {
+                queryBuilder
+                    .innerJoin('event.tags', 'filterTag')
+                    .andWhere('filterTag.id IN (:...tagIds)', { tagIds });
+            }
         }
 
         const events = await queryBuilder.orderBy('event.date', 'ASC').getMany();
@@ -114,6 +131,7 @@ export class EventsService {
             .createQueryBuilder('event')
             .leftJoinAndSelect('event.participants', 'participant')
             .leftJoinAndSelect('event.organizer', 'organizer')
+            .leftJoinAndSelect('event.tags', 'tag')
             .where('participant.id = :userId', { userId })
             .orWhere('event.organizerId = :userId', { userId })
             .orderBy('event.date', 'ASC')
@@ -177,7 +195,18 @@ export class EventsService {
         if (nextDateTime < new Date()) {
             throw new BadRequestException('Cannot set event in the past');
         }
-        await this.eventsRepository.update(id, updateEventDto);
+        const { tagIds, ...updateData } = updateEventDto;
+        await this.eventsRepository.update(id, updateData);
+        if (tagIds !== undefined) {
+            const eventEntity = await this.eventsRepository.findOne({
+                where: { id },
+                relations: ['tags'],
+            });
+            eventEntity!.tags = tagIds.length
+                ? await this.tagsService.findByIds(tagIds)
+                : [];
+            await this.eventsRepository.save(eventEntity!);
+        }
         return this.findOne(id, { id: userId } as User);
     }
 

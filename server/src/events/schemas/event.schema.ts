@@ -29,6 +29,7 @@ const baseEventSchema = {
     .moreThan(0, 'Capacity must be greater than 0')
     .optional(),
   isPublic: yup.boolean().default(true).optional(),
+  tagIds: yup.array().of(yup.number().required()).max(5, 'Maximum 5 tags').optional(),
 };
 
 export const createEventSchema = yup
@@ -54,6 +55,7 @@ export const updateEventSchema = yup
       .moreThan(0, 'Capacity must be greater than 0')
       .optional(),
     isPublic: yup.boolean().optional(),
+    tagIds: yup.array().of(yup.number().required()).max(5, 'Maximum 5 tags').optional(),
   })
   .test('future-date', 'Cannot set events in the past', (value) => {
     const eventDate = parseEventDateTime(value?.date, value?.time);

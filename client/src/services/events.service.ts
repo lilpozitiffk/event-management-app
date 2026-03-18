@@ -15,12 +15,15 @@ export interface Event {
     isOrganizer?: boolean;
     organizer: { id: number; name: string };
     participants: { id: number; name: string }[];
+    tags: { id: number; name: string }[];
 }
 
 export const eventsApi = {
-    getAll: async (search?: string): Promise<Event[]> => {
-        const params = search ? { params: { search } } : {};
-        const { data } = await api.get('/events', params);
+    getAll: async (search?: string, tagIds?: number[]): Promise<Event[]> => {
+        const params: Record<string, string> = {};
+        if (search) params.search = search;
+        if (tagIds?.length) params.tags = tagIds.join(',');
+        const { data } = await api.get('/events', { params });
         return data;
     },
     getById: async (id: number): Promise<Event> => {

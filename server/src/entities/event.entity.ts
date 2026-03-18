@@ -1,5 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, ManyToMany, JoinTable, JoinColumn } from 'typeorm';
 import { User } from './user.entity';
+import { Tag } from './tag.entity';
 
 @Entity()
 export class Event {
@@ -37,4 +38,8 @@ export class Event {
   @ManyToMany(() => User, (user) => user.joinedEvents)
   @JoinTable()
   participants: User[];
+
+  @ManyToMany(() => Tag, (tag) => tag.events, { eager: true })
+  @JoinTable()
+  tags: Tag[];
 }

@@ -38,9 +38,9 @@ export class EventsController {
   @Get()
   @UseGuards(OptionalJwtAuthGuard)
   @ApiOperation({ summary: 'Fetch public events' })
-  async findAll(@Query('search') search?: string, @Request() req?: { user?: { id: number } }) {
+  async findAll(@Query('search') search?: string, @Query('tags') tags?: string, @Request() req?: { user?: { id: number } }) {
     const user = req?.user ? ({ id: req.user.id } as any) : undefined;
-    return this.eventsService.findAll(user, search);
+    return this.eventsService.findAll(user, search, tags);
   }
 
   @Get(':id')
