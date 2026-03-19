@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { useAuthStore } from './stores/authStore';
 import Navbar from './components/Navbar';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
@@ -12,47 +12,45 @@ import MyEvents from './pages/MyEvents';
 import AiAssistant from './pages/AiAssistant';
 
 function RootRedirect() {
-  const { isAuthenticated } = useAuth();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   return <Navigate to={isAuthenticated ? '/events' : '/login'} replace />;
 }
 
 function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <div className="min-h-screen bg-gray-50">
-          <Navbar />
-          <main>
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="/events" element={<EventsList />} />
-              <Route path="/events/:id" element={<EventDetails />} />
-              <Route path="/events/:id/edit" element={
-                <ProtectedRoute>
-                  <EditEvent />
-                </ProtectedRoute>
-              } />
-              <Route path="/my-events" element={
-                <ProtectedRoute>
-                  <MyEvents />
-                </ProtectedRoute>
-              } />
-              <Route path="/create-event" element={
-                <ProtectedRoute>
-                  <CreateEvent />
-                </ProtectedRoute>
-              } />
-              <Route path="/ai" element={
-                <ProtectedRoute>
-                  <AiAssistant />
-                </ProtectedRoute>
-              } />
-              <Route path="/" element={<RootRedirect />} />
-            </Routes>
-          </main>
-        </div>
-      </BrowserRouter>
-    </AuthProvider>
+    <BrowserRouter>
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <main>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/events" element={<EventsList />} />
+            <Route path="/events/:id" element={<EventDetails />} />
+            <Route path="/events/:id/edit" element={
+              <ProtectedRoute>
+                <EditEvent />
+              </ProtectedRoute>
+            } />
+            <Route path="/my-events" element={
+              <ProtectedRoute>
+                <MyEvents />
+              </ProtectedRoute>
+            } />
+            <Route path="/create-event" element={
+              <ProtectedRoute>
+                <CreateEvent />
+              </ProtectedRoute>
+            } />
+            <Route path="/ai" element={
+              <ProtectedRoute>
+                <AiAssistant />
+              </ProtectedRoute>
+            } />
+            <Route path="/" element={<RootRedirect />} />
+          </Routes>
+        </main>
+      </div>
+    </BrowserRouter>
   );
 }
 

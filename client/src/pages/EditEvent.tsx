@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { eventsApi } from '../services/events.service';
-import { useAuth } from '../context/AuthContext';
+import { useAuthStore } from '../stores/authStore';
 import { eventSchema } from '../schemas/event.schema';
 import { ArrowLeft } from 'lucide-react';
 import TagMultiSelect from '../components/TagMultiSelect';
@@ -11,7 +11,7 @@ import TagMultiSelect from '../components/TagMultiSelect';
 export default function EditEvent() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const user = useAuthStore((s) => s.user);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');

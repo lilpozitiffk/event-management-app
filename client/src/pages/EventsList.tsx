@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { eventsApi, Event } from '../services/events.service';
-import { useAuth } from '../context/AuthContext';
+import { useAuthStore } from '../stores/authStore';
 import { tagsApi, Tag } from '../services/tags.service';
 import TagChip from '../components/TagChip';
 
@@ -12,7 +12,9 @@ export default function EventsList() {
     const [searchQuery, setSearchQuery] = useState('');
     const [allTags, setAllTags] = useState<Tag[]>([]);
     const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
-    const { user, isAuthenticated, logout } = useAuth();
+    const user = useAuthStore((s) => s.user);
+    const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+    const logout = useAuthStore((s) => s.logout);
     const navigate = useNavigate();
 
     useEffect(() => {
