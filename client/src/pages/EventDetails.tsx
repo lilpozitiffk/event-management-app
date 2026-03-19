@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { eventsApi, Event } from '../services/events.service';
-import { useAuth } from '../context/AuthContext';
+import { useAuthStore } from '../stores/authStore';
 import { Calendar, Clock, MapPin, Users, Edit, Trash2, ArrowLeft } from 'lucide-react';
+import TagChip from '../components/TagChip';
 
 export default function EventDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const user = useAuthStore((s) => s.user);
   
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
@@ -126,6 +127,13 @@ export default function EventDetails() {
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+        {event.tags?.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-4">
+            {event.tags.map(tag => (
+              <TagChip key={tag.id} name={tag.name} />
+            ))}
+          </div>
+        )}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           <div className="flex items-center text-gray-600">
             <Calendar className="w-5 h-5 mr-3 text-primary" />

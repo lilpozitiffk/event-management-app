@@ -5,9 +5,12 @@ import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 import { User } from './entities/user.entity';
 import { Event } from './entities/event.entity';
+import { Tag } from './entities/tag.entity';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { EventsModule } from './events/events.module';
+import { TagsModule } from './tags/tags.module';
+import { AiModule } from './ai/ai.module';
 
 @Module({
   imports: [
@@ -37,7 +40,7 @@ import { EventsModule } from './events/events.module';
         database: configService.get('DB_NAME'),
         url: databaseUrl,
         ssl: useSsl ? { rejectUnauthorized: false } : undefined,
-        entities: [User, Event],
+        entities: [User, Event, Tag],
         synchronize: true,
         };
       },
@@ -45,6 +48,8 @@ import { EventsModule } from './events/events.module';
     UsersModule,
     AuthModule,
     EventsModule,
+    TagsModule,
+    AiModule,
   ],
   controllers: [],
   providers: [],

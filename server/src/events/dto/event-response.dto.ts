@@ -50,4 +50,15 @@ export class EventResponseDto {
 
   @ApiProperty({ type: [EventUserDto] })
   participants: EventUserDto[];
+
+  @ApiProperty({ type: () => [EventTagDto] })
+  tags: EventTagDto[];
+}
+
+export class EventTagDto {
+  @ApiProperty()
+  id: number;
+
+  @ApiProperty()
+  name: string;
 }

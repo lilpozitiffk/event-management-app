@@ -1,23 +1,34 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { eventsApi, Event } from '../services/events.service';
-import { useAuth } from '../context/AuthContext';
+import { useAuthStore } from '../stores/authStore';
+import { tagsApi, Tag } from '../services/tags.service';
+import TagChip from '../components/TagChip';
 
 export default function EventsList() {
     const [events, setEvents] = useState<Event[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
-    const { user, isAuthenticated, logout } = useAuth();
+    const [allTags, setAllTags] = useState<Tag[]>([]);
+    const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
+    const user = useAuthStore((s) => s.user);
+    const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+    const logout = useAuthStore((s) => s.logout);
     const navigate = useNavigate();
 
     useEffect(() => {
         fetchEvents();
+        tagsApi.getAll().then(setAllTags);
     }, []);
+
+    useEffect(() => {
+        fetchEvents();
+    }, [selectedTagIds]);
 
     const fetchEvents = async () => {
         try {
-            const data = await eventsApi.getAll();
+            const data = await eventsApi.getAll(undefined, selectedTagIds.length > 0 ? selectedTagIds : undefined);
             const enrichedEvents = data.map(event => ({
                 ...event,
                 isJoined: user ? event.participants?.some((p: any) => p.id === user.id) : false,
@@ -94,7 +105,7 @@ export default function EventsList() {
                 <h1 className="text-3xl font-bold text-gray-900">Discover Events</h1>
                 <p className="text-gray-500 mt-2">Find and join exciting events happening around you</p>
             </div>
-            <div className="mb-8">
+            <div className="mb-4">
                 <input
                     type="text"
                     placeholder="Search events..."
@@ -103,6 +114,33 @@ export default function EventsList() {
                     className="w-full md:w-96 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
             </div>
+            {allTags.length > 0 && (
+                <div className="mb-8 flex flex-wrap gap-2">
+                    {allTags.map(tag => (
+                        <button
+                            key={tag.id}
+                            onClick={() => setSelectedTagIds(prev =>
+                                prev.includes(tag.id) ? prev.filter(id => id !== tag.id) : [...prev, tag.id]
+                            )}
+                            className={`px-3 py-1 rounded-full text-sm font-medium border transition ${
+                                selectedTagIds.includes(tag.id)
+                                    ? 'bg-indigo-600 text-white border-indigo-600'
+                                    : 'bg-white text-gray-600 border-gray-300 hover:border-indigo-400'
+                            }`}
+                        >
+                            {tag.name}
+                        </button>
+                    ))}
+                    {selectedTagIds.length > 0 && (
+                        <button
+                            onClick={() => setSelectedTagIds([])}
+                            className="px-3 py-1 rounded-full text-sm font-medium text-red-500 hover:text-red-700"
+                        >
+                            Clear filters
+                        </button>
+                    )}
+                </div>
+            )}
             {error && (
                 <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg flex items-center justify-between">
                     <span>{error}</span>
@@ -113,7 +151,7 @@ export default function EventsList() {
             )}
             {filteredEvents.length === 0 ? (
                 <div className="text-center text-gray-500 py-12">
-                    {searchQuery ? 'No events found matching your search' : 'No events available yet. Check back later!'}
+                    {searchQuery ? 'No events found matching your search' : selectedTagIds.length > 0 ? 'No events match the selected tags.' : 'No events available yet. Check back later!'}
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -123,6 +161,13 @@ export default function EventsList() {
                             onClick={() => navigate(`/events/${event.id}`)}
                             className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition cursor-pointer flex flex-col"
                         >
+                            {event.tags?.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mb-2">
+                                    {event.tags.map(tag => (
+                                        <TagChip key={tag.id} name={tag.name} />
+                                    ))}
+                                </div>
+                            )}
                             <h3 className="text-xl font-bold text-gray-900 mb-2">{event.title}</h3>
                             <p className="text-gray-500 text-sm mb-4 line-clamp-2">{event.description}</p>
                             <div className="space-y-2 text-sm text-gray-600 mb-6 flex-grow">

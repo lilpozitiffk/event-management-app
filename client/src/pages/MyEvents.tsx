@@ -2,6 +2,21 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { eventsApi, Event } from '../services/events.service';
 import { Calendar, Clock, MapPin, Users, LayoutList, CalendarDays } from 'lucide-react';
+import TagChip from '../components/TagChip';
+
+const tagCalendarColors: Record<string, string> = {
+  tech: 'bg-blue-500',
+  art: 'bg-purple-500',
+  business: 'bg-green-500',
+  music: 'bg-pink-500',
+  sports: 'bg-orange-500',
+  education: 'bg-yellow-500',
+};
+
+const getEventColor = (event: Event): string => {
+  const firstTag = event.tags?.[0]?.name?.toLowerCase();
+  return firstTag ? (tagCalendarColors[firstTag] || 'bg-indigo-600') : 'bg-indigo-600';
+};
 
 type ViewMode = 'list' | 'calendar';
 type CalendarMode = 'month' | 'week';
@@ -175,6 +190,13 @@ export default function MyEvents() {
               onClick={() => navigate(`/events/${event.id}`)}
               className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition cursor-pointer flex flex-col"
             >
+              {event.tags?.length > 0 && (
+                <div className="flex flex-wrap gap-1 mb-2">
+                  {event.tags.map(tag => (
+                    <TagChip key={tag.id} name={tag.name} />
+                  ))}
+                </div>
+              )}
               <h3 className="text-xl font-bold text-gray-900 mb-2">{event.title}</h3>
               <p className="text-gray-500 text-sm mb-4 line-clamp-2">{event.description}</p>
               <div className="space-y-2 text-sm text-gray-600 mb-6 flex-grow">
@@ -277,7 +299,7 @@ export default function MyEvents() {
                       <div
                         key={event.id}
                         onClick={() => navigate(`/events/${event.id}`)}
-                        className="text-xs bg-primary text-white px-2 py-1 rounded mb-1 cursor-pointer"
+                        className={`text-xs ${getEventColor(event)} text-white px-2 py-1 rounded mb-1 cursor-pointer`}
                       >
                         <div className="truncate">{event.title}</div>
                         <div className="opacity-90">{getTimeRange(event.time)}</div>
@@ -310,7 +332,7 @@ export default function MyEvents() {
                           <div
                             key={event.id}
                             onClick={() => navigate(`/events/${event.id}`)}
-                            className="text-xs bg-primary text-white px-2 py-2 rounded cursor-pointer"
+                            className={`text-xs ${getEventColor(event)} text-white px-2 py-2 rounded cursor-pointer`}
                           >
                             <div className="font-medium truncate">{event.title}</div>
                             <div className="opacity-90 mt-0.5">{getTimeRange(event.time)}</div>

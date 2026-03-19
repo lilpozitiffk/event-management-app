@@ -1,9 +1,10 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { LogOut, Calendar, PlusCircle, List } from 'lucide-react';
+import { useAuthStore } from '../stores/authStore';
+import { LogOut, Calendar, PlusCircle, List, Sparkles } from 'lucide-react';
 
 export default function Navbar() {
-  const { user, logout } = useAuth();
+  const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -31,6 +32,10 @@ export default function Navbar() {
                 <Link to="/my-events" className="flex items-center text-gray-600 hover:text-primary">
                   <Calendar className="w-4 h-4 mr-1" />
                   <span className="hidden sm:inline">My Events</span>
+                </Link>
+                <Link to="/ai" className="flex items-center text-gray-600 hover:text-primary">
+                  <Sparkles className="w-4 h-4 mr-1" />
+                  <span className="hidden sm:inline">AI Assistant</span>
                 </Link>
                 <Link to="/create-event" className="flex items-center bg-primary text-white px-3 py-2 rounded-md hover:bg-indigo-700">
                   <PlusCircle className="w-4 h-4 mr-1" />

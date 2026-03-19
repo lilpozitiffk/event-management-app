@@ -4,10 +4,12 @@ import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { createEventSchema } from '../schemas/event.schema';
 import { eventsApi } from '../services/events.service';
+import TagMultiSelect from '../components/TagMultiSelect';
 
 export default function CreateEvent() {
   const navigate = useNavigate();
   const [submitError, setSubmitError] = useState('');
+  const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
 
   const {
     register,
@@ -29,6 +31,7 @@ export default function CreateEvent() {
         description: data.description?.trim() || 'No description provided',
         capacity: Number.isNaN(data.capacity) || data.capacity === '' ? null : data.capacity,
         isPublic: data.isPublic === true || data.isPublic === 'true',
+        tagIds: selectedTagIds,
       };
       const createdEvent = await eventsApi.create(payload);
       navigate(`/events/${createdEvent.id}`);
@@ -75,6 +78,7 @@ export default function CreateEvent() {
           <input
             id="date"
             type="date"
+            min={new Date().toISOString().split('T')[0]}
             {...register('date')}
             className={`border rounded p-2 focus:outline-none focus:ring-2 ${errors.date ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-blue-200'}`}
           />
@@ -129,6 +133,11 @@ export default function CreateEvent() {
             </label>
           </div>
           {errors.isPublic && <span className="text-red-500 text-sm mt-1">{errors.isPublic?.message}</span>}
+        </div>
+
+        <div className="flex flex-col">
+          <label className="mb-1 font-medium text-gray-700">Tags (optional)</label>
+          <TagMultiSelect value={selectedTagIds} onChange={setSelectedTagIds} />
         </div>
 
         {submitError && (

@@ -3,17 +3,19 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { eventsApi } from '../services/events.service';
-import { useAuth } from '../context/AuthContext';
+import { useAuthStore } from '../stores/authStore';
 import { eventSchema } from '../schemas/event.schema';
 import { ArrowLeft } from 'lucide-react';
+import TagMultiSelect from '../components/TagMultiSelect';
 
 export default function EditEvent() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const user = useAuthStore((s) => s.user);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
 
   const {
     register,
@@ -45,6 +47,7 @@ export default function EditEvent() {
         capacity: data.capacity,
         isPublic: data.isPublic,
       });
+      setSelectedTagIds((data.tags || []).map((t: any) => t.id));
       setError('');
     } catch (err: any) {
       setError('Failed to load event details');
@@ -61,6 +64,7 @@ export default function EditEvent() {
         ...data,
         capacity: data.capacity || null,
         isPublic: data.isPublic === true || data.isPublic === 'true',
+        tagIds: selectedTagIds,
       };
       await eventsApi.update(Number(id), eventData);
       navigate(`/events/${id}`);
@@ -139,6 +143,7 @@ export default function EditEvent() {
             <input
               {...register('date')}
               type="date"
+              min={new Date().toISOString().split('T')[0]}
               className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary outline-none"
             />
             {errors.date && (
@@ -206,6 +211,10 @@ export default function EditEvent() {
           {errors.isPublic && (
             <p className="text-red-500 text-xs mt-1">{errors.isPublic.message}</p>
           )}
+        </div>
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Tags (optional)</label>
+          <TagMultiSelect value={selectedTagIds} onChange={setSelectedTagIds} />
         </div>
         <button
           type="submit"

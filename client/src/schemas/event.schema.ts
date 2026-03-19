@@ -46,6 +46,11 @@ export const createEventSchema = yup.object({
   isPublic: yup
     .boolean()
     .default(true),
+  tagIds: yup
+    .array()
+    .of(yup.number().required())
+    .max(5, 'Maximum 5 tags')
+    .optional(),
 }).test('future-datetime', 'Event cannot be in the past', (value) => {
   const eventDate = parseEventDateTime(value?.date, value?.time);
   if (!eventDate) return false;
@@ -84,6 +89,11 @@ export const eventSchema = yup.object({
   isPublic: yup
     .boolean()
     .default(true),
+  tagIds: yup
+    .array()
+    .of(yup.number().required())
+    .max(5, 'Maximum 5 tags')
+    .optional(),
 }).test('future-datetime', 'Event cannot be in the past', (value) => {
   const eventDate = parseEventDateTime(value?.date, value?.time);
   if (!eventDate) return false;
