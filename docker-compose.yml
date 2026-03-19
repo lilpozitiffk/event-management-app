@@ -32,6 +32,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:-supersecretkey123}
       PORT: ${PORT:-3000}
       NODE_ENV: development
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
     depends_on:
       postgres:
         condition: service_healthy

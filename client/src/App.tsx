@@ -9,6 +9,7 @@ import EventDetails from './pages/EventDetails';
 import CreateEvent from './pages/CreateEvent';
 import EditEvent from './pages/EditEvent';
 import MyEvents from './pages/MyEvents';
+import AiAssistant from './pages/AiAssistant';
 
 function RootRedirect() {
   const { isAuthenticated } = useAuth();
@@ -39,6 +40,11 @@ function App() {
               <Route path="/create-event" element={
                 <ProtectedRoute>
                   <CreateEvent />
+                </ProtectedRoute>
+              } />
+              <Route path="/ai" element={
+                <ProtectedRoute>
+                  <AiAssistant />
                 </ProtectedRoute>
               } />
               <Route path="/" element={<RootRedirect />} />
