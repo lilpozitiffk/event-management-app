@@ -79,7 +79,11 @@ export class EventsService {
         return this.mapEvent(event, organizer);
     }
 
-    async findAll(user?: User, search?: string, tags?: string) {
+    async findAll(user?: User, search?: string, tags?: string, page = 1, limit = 12) {
+        const safePage = Math.max(1, page);
+        const safeLimit = Math.min(Math.max(1, limit), 50);
+        const skip = (safePage - 1) * safeLimit;
+
         const queryBuilder = this.eventsRepository
             .createQueryBuilder('event')
             .leftJoinAndSelect('event.participants', 'participant')
@@ -103,9 +107,21 @@ export class EventsService {
             }
         }
 
-        const events = await queryBuilder.orderBy('event.date', 'ASC').getMany();
+        const [events, total] = await queryBuilder
+            .orderBy('event.date', 'ASC')
+            .skip(skip)
+            .take(safeLimit)
+            .getManyAndCount();
 
-        return events.map((event) => this.mapEvent(event, user));
+        return {
+            data: events.map((event) => this.mapEvent(event, user)),
+            meta: {
+                total,
+                page: safePage,
+                limit: safeLimit,
+                totalPages: Math.ceil(total / safeLimit),
+            },
+        };
     }
 
     async findOne(id: number, user?: User) {
@@ -126,8 +142,12 @@ export class EventsService {
         return this.mapEvent(event, user);
     }
 
-    async getUserEvents(userId: number) {
-        const events = await this.eventsRepository
+    async getUserEvents(userId: number, page = 1, limit = 12) {
+        const safePage = Math.max(1, page);
+        const safeLimit = Math.min(Math.max(1, limit), 100);
+        const skip = (safePage - 1) * safeLimit;
+
+        const [events, total] = await this.eventsRepository
             .createQueryBuilder('event')
             .leftJoinAndSelect('event.participants', 'participant')
             .leftJoinAndSelect('event.organizer', 'organizer')
@@ -135,9 +155,19 @@ export class EventsService {
             .where('participant.id = :userId', { userId })
             .orWhere('event.organizerId = :userId', { userId })
             .orderBy('event.date', 'ASC')
-            .getMany();
+            .skip(skip)
+            .take(safeLimit)
+            .getManyAndCount();
 
-        return events.map((event) => this.mapEvent(event, { id: userId } as User));
+        return {
+            data: events.map((event) => this.mapEvent(event, { id: userId } as User)),
+            meta: {
+                total,
+                page: safePage,
+                limit: safeLimit,
+                totalPages: Math.ceil(total / safeLimit),
+            },
+        };
     }
 
     async join(eventId: number, userId: number) {

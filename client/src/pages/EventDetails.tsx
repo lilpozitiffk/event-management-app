@@ -27,7 +27,7 @@ export default function EventDetails() {
       const data = await eventsApi.getById(Number(id));
       setEvent(data);
       setError('');
-    } catch (err: any) {
+    } catch {
       setError('Failed to load event details');
     } finally {
       setLoading(false);
@@ -48,8 +48,9 @@ export default function EventDetails() {
         await eventsApi.join(event.id);
       }
       await fetchEventDetails();
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Action failed');
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { message?: string } } };
+      alert(axiosErr.response?.data?.message || 'Action failed');
     } finally {
       setActionLoading(false);
     }
@@ -63,7 +64,7 @@ export default function EventDetails() {
       await eventsApi.delete(eventId);
       setShowDeleteModal(false);
       navigate('/events');
-    } catch (err: any) {
+    } catch {
       alert('Failed to delete event');
     } finally {
       setDeleteLoading(false);

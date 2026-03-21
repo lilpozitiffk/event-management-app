@@ -14,10 +14,10 @@ export class OptionalJwtAuthGuard extends AuthGuard('jwt') {
     return super.canActivate(context) as boolean | Promise<boolean>;
   }
 
-  handleRequest(err: any, user: any) {
+  handleRequest<TUser = unknown>(err: Error | null, user: TUser): TUser {
     if (err) {
       throw err;
     }
-    return user || null;
+    return user || (null as unknown as TUser);
   }
 }

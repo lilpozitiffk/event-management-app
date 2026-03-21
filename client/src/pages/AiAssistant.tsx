@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { aiApi } from '../services/ai.service';
 import { Send, Bot, User, Sparkles, Trash2 } from 'lucide-react';
 
@@ -50,7 +51,8 @@ export default function AiAssistant() {
       const history = messages.map((m) => ({ role: m.role, content: m.content }));
       const { answer } = await aiApi.ask(q, history);
       setMessages((prev) => [...prev, { role: 'assistant', content: answer }]);
-    } catch (err: any) {
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
       setMessages((prev) => [
         ...prev,
         {
@@ -112,13 +114,19 @@ export default function AiAssistant() {
               </div>
             )}
             <div
-              className={`max-w-[80%] px-4 py-3 rounded-2xl whitespace-pre-line ${
+              className={`max-w-[80%] px-4 py-3 rounded-2xl ${
                 msg.role === 'user'
-                  ? 'bg-indigo-600 text-white rounded-br-md'
+                  ? 'bg-indigo-600 text-white rounded-br-md whitespace-pre-line'
                   : 'bg-gray-100 text-gray-800 rounded-bl-md'
               }`}
             >
-              {msg.content}
+              {msg.role === 'assistant' ? (
+                <div className="prose prose-sm max-w-none prose-p:my-1 prose-li:my-0.5 prose-ol:my-1 prose-ul:my-1 prose-headings:my-2 prose-table:my-2 prose-hr:my-2">
+                  <ReactMarkdown>{msg.content}</ReactMarkdown>
+                </div>
+              ) : (
+                msg.content
+              )}
             </div>
             {msg.role === 'user' && (
               <div className="w-8 h-8 bg-gray-600 text-white rounded-full flex items-center justify-center flex-shrink-0">

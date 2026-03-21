@@ -18,9 +18,19 @@ export interface Event {
     tags: { id: number; name: string }[];
 }
 
+export interface PaginatedResponse {
+    data: Event[];
+    meta: {
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+    };
+}
+
 export const eventsApi = {
-    getAll: async (search?: string, tagIds?: number[]): Promise<Event[]> => {
-        const params: Record<string, string> = {};
+    getAll: async (search?: string, tagIds?: number[], page = 1, limit = 12): Promise<PaginatedResponse> => {
+        const params: Record<string, string | number> = { page, limit };
         if (search) params.search = search;
         if (tagIds?.length) params.tags = tagIds.join(',');
         const { data } = await api.get('/events', { params });
@@ -38,11 +48,11 @@ export const eventsApi = {
         const { data } = await api.post(`/events/${id}/leave`);
         return data;
     },
-    create: async (eventData: any) => {
+    create: async (eventData: Omit<Event, 'id' | 'participantsCount' | 'isJoined' | 'isFull' | 'isOrganizer' | 'organizer' | 'participants' | 'tags'> & { tagIds?: number[] }) => {
         const { data } = await api.post('/events', eventData);
         return data;
     },
-    update: async (id: number, eventData: any) => {
+    update: async (id: number, eventData: Partial<Omit<Event, 'id' | 'participantsCount' | 'isJoined' | 'isFull' | 'isOrganizer' | 'organizer' | 'participants' | 'tags'> & { tagIds?: number[] }>) => {
         const { data } = await api.patch(`/events/${id}`, eventData);
         return data;
     },
@@ -50,8 +60,8 @@ export const eventsApi = {
         const { data } = await api.delete(`/events/${id}`);
         return data;
     },
-    getMyEvents: async (): Promise<Event[]> => {
-        const { data } = await api.get('/users/me/events');
+    getMyEvents: async (page = 1, limit = 12): Promise<PaginatedResponse> => {
+        const { data } = await api.get('/users/me/events', { params: { page, limit } });
         return data;
     },
 };
