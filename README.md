@@ -40,22 +40,29 @@ BACKEND_PORT
 
 FRONTEND_PORT
 VITE_API_URL
+
+OPENAI_API_KEY
+ALLOWED_ORIGINS    (production only)
+DATABASE_URL       (production only)
 ```
 
-## Deployment (Vercel + Fly.io + Neon)
+## Deployment (Vercel + Railway + Neon)
 Production setup:
 - Frontend: Vercel
-- Backend: Fly.io
+- Backend: Railway
 - Database: Neon (Postgres)
 
-Steps (high level):
+Steps:
 1. Create a Neon project and copy the connection string.
-2. Deploy backend to Fly.io:
-   - Set secrets: `DATABASE_URL`, `JWT_SECRET`
-   - Deploy from `server` (`fly deploy`)
+2. Deploy backend to Railway:
+   - Connect GitHub repo, set root directory to `server`
+   - Set variables: `DATABASE_URL`, `JWT_SECRET`, `OPENAI_API_KEY`, `ALLOWED_ORIGINS`
+   - `ALLOWED_ORIGINS` = your Vercel domain (e.g. `https://your-app.vercel.app`)
 3. Deploy frontend to Vercel:
-   - Set `VITE_API_URL` to `https://<fly-app>.fly.dev/api`
-   - Redeploy
+   - Connect GitHub repo, set root directory to `client`
+   - Set `VITE_API_URL` to `https://<railway-app>.up.railway.app/api`
+4. Seed production database:
+   - `cd server && railway run npm run reset-and-seed`
 
 ## Default Users (seeded automatically)
 Name        Email               Password      
@@ -67,3 +74,5 @@ You can log in with any of these credentials right after `docker-compose up`.
 ## Notes
 - Backend container runs `npm run seed` on startup (if it fails, it continues).
 - Use `docker-compose down -v` to stop and reset the database.
+- AI Assistant requires a valid `OPENAI_API_KEY` (uses GPT-4o-mini).
+- AI Assistant is read-only access - it cant create, edit, or delete events.
