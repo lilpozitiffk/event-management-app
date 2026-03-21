@@ -36,8 +36,9 @@ export default function Login() {
         await register(data.name!, data.email, data.password);
       }
       navigate('/events');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Authentication failed');
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { message?: string } } };
+      setError(axiosErr.response?.data?.message || 'Authentication failed');
     } finally {
       setLoading(false);
     }

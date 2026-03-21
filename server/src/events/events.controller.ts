@@ -20,6 +20,7 @@ import { createEventSchema, updateEventSchema } from './schemas/event.schema';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../auth/optional-jwt-auth.guard';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { User } from '../entities/user.entity';
 
 @ApiTags('Events')
 @Controller('events')
@@ -38,16 +39,22 @@ export class EventsController {
   @Get()
   @UseGuards(OptionalJwtAuthGuard)
   @ApiOperation({ summary: 'Fetch public events' })
-  async findAll(@Query('search') search?: string, @Query('tags') tags?: string, @Request() req?: { user?: { id: number } }) {
-    const user = req?.user ? ({ id: req.user.id } as any) : undefined;
-    return this.eventsService.findAll(user, search, tags);
+  async findAll(
+    @Query('search') search?: string,
+    @Query('tags') tags?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Request() req?: { user?: { id: number } },
+  ) {
+    const user = req?.user ? ({ id: req.user.id } as User) : undefined;
+    return this.eventsService.findAll(user, search, tags, Number(page) || 1, Number(limit) || 12);
   }
 
   @Get(':id')
   @UseGuards(OptionalJwtAuthGuard)
   @ApiOperation({ summary: 'Fetch single event' })
   async findOne(@Param('id', ParseIntPipe) id: number, @Request() req?: { user?: { id: number } }) {
-    const user = req?.user ? ({ id: req.user.id } as any) : undefined;
+    const user = req?.user ? ({ id: req.user.id } as User) : undefined;
     return this.eventsService.findOne(id, user);
   }
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { eventsApi, Event } from '../services/events.service';
-import { Calendar, Clock, MapPin, Users, LayoutList, CalendarDays } from 'lucide-react';
+import { Calendar, Clock, MapPin, Users, LayoutList, CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
 import TagChip from '../components/TagChip';
 
 const tagCalendarColors: Record<string, string> = {
@@ -23,28 +23,49 @@ type CalendarMode = 'month' | 'week';
 
 export default function MyEvents() {
   const [events, setEvents] = useState<Event[]>([]);
+  const [allEvents, setAllEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [calendarMode, setCalendarMode] = useState<CalendarMode>('month');
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchMyEvents();
+  }, [currentPage]);
+
+  useEffect(() => {
+    fetchAllEventsForCalendar();
   }, []);
 
   const fetchMyEvents = async () => {
     try {
       setLoading(true);
-      const data = await eventsApi.getMyEvents();
-      setEvents(data);
+      const response = await eventsApi.getMyEvents(currentPage, 12);
+      setEvents(response.data);
+      setTotalPages(response.meta.totalPages);
       setError('');
     } catch (error) {
       setError('Failed to load your events. Please try again later.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchAllEventsForCalendar = async () => {
+    const all: Event[] = [];
+    let page = 1;
+    let pages = 1;
+    do {
+      const response = await eventsApi.getMyEvents(page, 100);
+      all.push(...response.data);
+      pages = response.meta.totalPages;
+      page++;
+    } while (page <= pages);
+    setAllEvents(all);
   };
 
   const getDaysInMonth = (year: number, month: number) => {
@@ -61,7 +82,7 @@ export default function MyEvents() {
 
   const getEventsForDate = (date: Date) => {
     const dateStr = getDateKey(date);
-    return events.filter((event) => event.date === dateStr);
+    return allEvents.filter((event) => event.date === dateStr);
   };
 
   const getWeekStart = (date: Date) => {
@@ -168,7 +189,7 @@ export default function MyEvents() {
         </div>
       )}
 
-      {events.length === 0 && !error ? (
+      {events.length === 0 && allEvents.length === 0 && !error ? (
         <div className="text-center py-12 bg-white rounded-xl shadow-sm border border-gray-100">
           <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-gray-900 mb-2">
@@ -183,6 +204,7 @@ export default function MyEvents() {
           </button>
         </div>
       ) : viewMode === 'list' ? (
+        <>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {events.map((event) => (
             <div
@@ -223,6 +245,28 @@ export default function MyEvents() {
             </div>
           ))}
         </div>
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-4 mt-8">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="flex items-center gap-1 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+            >
+              <ChevronLeft className="w-4 h-4" /> Previous
+            </button>
+            <span className="text-sm text-gray-600">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="flex items-center gap-1 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+            >
+              Next <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+        </>
       ) : (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">

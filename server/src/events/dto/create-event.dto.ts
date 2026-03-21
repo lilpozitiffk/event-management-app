@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsOptional, IsNumber, Min, IsBoolean, IsArray } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsNumber, Min, IsBoolean, IsArray, ArrayMaxSize } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateEventDto {
@@ -40,6 +40,7 @@ export class CreateEventDto {
 
   @ApiPropertyOptional({ type: [Number], example: [1, 2] })
   @IsArray()
+  @ArrayMaxSize(5, { message: 'Maximum 5 tags per event' })
   @IsOptional()
   tagIds?: number[];
 }

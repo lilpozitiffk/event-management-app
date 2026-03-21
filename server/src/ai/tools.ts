@@ -34,6 +34,10 @@ export const agentTools = [
             type: 'string',
             description: 'End date of a date range in YYYY-MM-DD format. Use together with dateFrom for date range queries.',
           },
+          offset: {
+            type: 'number',
+            description: 'Pagination offset. Use 0 for first page (default), 10 for second page, 20 for third, etc. Use when user asks to "show more" events.',
+          },
         },
         required: [],
       },
@@ -90,6 +94,10 @@ export const agentTools = [
           dateTo: {
             type: 'string',
             description: 'End date of a date range in YYYY-MM-DD format.',
+          },
+          offset: {
+            type: 'number',
+            description: 'Pagination offset. Use 0 for first page (default), 10 for second page, 20 for third, etc. Use when user asks to "show more" events.',
           },
         },
         required: [],

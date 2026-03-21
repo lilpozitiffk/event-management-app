@@ -2,7 +2,7 @@ import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
-import { createEventSchema } from '../schemas/event.schema';
+import { createEventSchema, CreateEventFormValues } from '../schemas/event.schema';
 import { eventsApi } from '../services/events.service';
 import TagMultiSelect from '../components/TagMultiSelect';
 
@@ -23,25 +23,26 @@ export default function CreateEvent() {
     },
   });
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: CreateEventFormValues) => {
     setSubmitError('');
     try {
       const payload = {
         ...data,
         description: data.description?.trim() || 'No description provided',
-        capacity: Number.isNaN(data.capacity) || data.capacity === '' ? null : data.capacity,
-        isPublic: data.isPublic === true || data.isPublic === 'true',
+        capacity: Number.isNaN(data.capacity as number) || data.capacity === undefined ? null : data.capacity,
+        isPublic: data.isPublic === true,
         tagIds: selectedTagIds,
       };
       const createdEvent = await eventsApi.create(payload);
       navigate(`/events/${createdEvent.id}`);
-    } catch (error: any) {
-      const details = error.response?.data?.details;
+    } catch (error: unknown) {
+      const axiosErr = error as { response?: { data?: { message?: string; details?: Record<string, string> } } };
+      const details = axiosErr.response?.data?.details;
       if (details && typeof details === 'object') {
         const firstError = Object.values(details)[0];
         setSubmitError(String(firstError));
       } else {
-        setSubmitError(error.response?.data?.message || 'Failed to create event');
+        setSubmitError(axiosErr.response?.data?.message || 'Failed to create event');
       }
     }
   };

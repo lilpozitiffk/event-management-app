@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { eventsApi } from '../services/events.service';
 import { useAuthStore } from '../stores/authStore';
-import { eventSchema } from '../schemas/event.schema';
+import { eventSchema, EventFormData } from '../schemas/event.schema';
 import { ArrowLeft } from 'lucide-react';
 import TagMultiSelect from '../components/TagMultiSelect';
 
@@ -47,29 +47,30 @@ export default function EditEvent() {
         capacity: data.capacity,
         isPublic: data.isPublic,
       });
-      setSelectedTagIds((data.tags || []).map((t: any) => t.id));
+      setSelectedTagIds((data.tags || []).map((t: { id: number; name: string }) => t.id));
       setError('');
-    } catch (err: any) {
+    } catch {
       setError('Failed to load event details');
     } finally {
       setLoading(false);
     }
   };
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: EventFormData) => {
     setError('');
     setSaving(true);
     try {
       const eventData = {
         ...data,
         capacity: data.capacity || null,
-        isPublic: data.isPublic === true || data.isPublic === 'true',
+        isPublic: data.isPublic === true,
         tagIds: selectedTagIds,
       };
       await eventsApi.update(Number(id), eventData);
       navigate(`/events/${id}`);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to update event');
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { message?: string } } };
+      setError(axiosErr.response?.data?.message || 'Failed to update event');
     } finally {
       setSaving(false);
     }

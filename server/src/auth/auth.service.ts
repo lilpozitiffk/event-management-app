@@ -3,6 +3,8 @@ import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import * as bcrypt from 'bcrypt';
 import { AuthResponseDto, AuthUserDto } from './dto/auth-response.dto';
+import { LoginDto } from './dto/login.dto';
+import { CreateUserDto } from './dto/create-user.dto';
 
 @Injectable()
 export class AuthService {
@@ -20,7 +22,7 @@ export class AuthService {
     return null;
   }
 
-  async login(loginDto: any): Promise<AuthResponseDto> {
+  async login(loginDto: LoginDto): Promise<AuthResponseDto> {
     const user = await this.validateUser(loginDto.email, loginDto.password);
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
@@ -33,7 +35,7 @@ export class AuthService {
     };
   }
 
-  async register(createUserDto: any): Promise<AuthResponseDto> {
+  async register(createUserDto: CreateUserDto): Promise<AuthResponseDto> {
     const existingUser = await this.usersService.findOne(createUserDto.email);
     if (existingUser) {
       throw new ConflictException('Email already exists');

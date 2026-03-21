@@ -5,7 +5,7 @@ import { Schema, ValidationError } from 'yup';
 export class YupValidationPipe implements PipeTransform {
   constructor(private readonly schema: Schema) {}
 
-  async transform(value: any, metadata: ArgumentMetadata) {
+  async transform(value: unknown, metadata: ArgumentMetadata) {
 
     if (metadata.type !== 'body' || !this.schema) {
       return value;

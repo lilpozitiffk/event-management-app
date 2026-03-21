@@ -4,6 +4,7 @@ import { eventsApi, Event } from '../services/events.service';
 import { useAuthStore } from '../stores/authStore';
 import { tagsApi, Tag } from '../services/tags.service';
 import TagChip from '../components/TagChip';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function EventsList() {
     const [events, setEvents] = useState<Event[]>([]);
@@ -12,29 +13,40 @@ export default function EventsList() {
     const [searchQuery, setSearchQuery] = useState('');
     const [allTags, setAllTags] = useState<Tag[]>([]);
     const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
     const user = useAuthStore((s) => s.user);
     const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
     const logout = useAuthStore((s) => s.logout);
     const navigate = useNavigate();
 
     useEffect(() => {
-        fetchEvents();
         tagsApi.getAll().then(setAllTags);
     }, []);
 
     useEffect(() => {
+        setCurrentPage(1);
+    }, [selectedTagIds, searchQuery]);
+
+    useEffect(() => {
         fetchEvents();
-    }, [selectedTagIds]);
+    }, [currentPage, selectedTagIds]);
 
     const fetchEvents = async () => {
         try {
-            const data = await eventsApi.getAll(undefined, selectedTagIds.length > 0 ? selectedTagIds : undefined);
-            const enrichedEvents = data.map(event => ({
+            setLoading(true);
+            const response = await eventsApi.getAll(
+                undefined,
+                selectedTagIds.length > 0 ? selectedTagIds : undefined,
+                currentPage,
+            );
+            const enrichedEvents = response.data.map(event => ({
                 ...event,
-                isJoined: user ? event.participants?.some((p: any) => p.id === user.id) : false,
+                isJoined: user ? event.participants?.some((p) => p.id === user.id) : false,
                 isOrganizer: user ? event.organizer?.id === user.id : false,
             }));
             setEvents(enrichedEvents);
+            setTotalPages(response.meta.totalPages);
             setError('');
         } catch (error) {
             setError('Failed to load events. Please try again later.');
@@ -53,14 +65,15 @@ export default function EventsList() {
         try {
             await eventsApi.join(id);
             fetchEvents();
-        } catch (error: any) {
-            if (error.response?.status === 401) {
+        } catch (error: unknown) {
+            const err = error as { response?: { status?: number; data?: { message?: string } } };
+            if (err.response?.status === 401) {
                 alert('Session expired. Please login again.');
                 logout();
                 navigate('/login');
                 return;
             }
-            alert(error.response?.data?.message || 'Failed to join event');
+            alert(err.response?.data?.message || 'Failed to join event');
         }
     };
 
@@ -74,14 +87,15 @@ export default function EventsList() {
         try {
             await eventsApi.leave(id);
             fetchEvents();
-        } catch (error: any) {
-            if (error.response?.status === 401) {
+        } catch (error: unknown) {
+            const err = error as { response?: { status?: number; data?: { message?: string } } };
+            if (err.response?.status === 401) {
                 alert('Session expired. Please login again.');
                 logout();
                 navigate('/login');
                 return;
             }
-            alert(error.response?.data?.message || 'Failed to leave event');
+            alert(err.response?.data?.message || 'Failed to leave event');
         }
     };
 
@@ -90,14 +104,6 @@ export default function EventsList() {
         event.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
         event.location.toLowerCase().includes(searchQuery.toLowerCase())
     );
-
-    if (loading) {
-        return (
-            <div className="max-w-7xl mx-auto px-4 py-8">
-                <div className="text-center text-gray-500">Loading events...</div>
-            </div>
-        );
-    }
 
     return (
         <div className="max-w-7xl mx-auto px-4 py-8">
@@ -149,68 +155,94 @@ export default function EventsList() {
                     </button>
                 </div>
             )}
-            {filteredEvents.length === 0 ? (
+            {loading ? (
+                <div className="text-center text-gray-500 py-12">Loading events...</div>
+            ) : filteredEvents.length === 0 ? (
                 <div className="text-center text-gray-500 py-12">
                     {searchQuery ? 'No events found matching your search' : selectedTagIds.length > 0 ? 'No events match the selected tags.' : 'No events available yet. Check back later!'}
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {filteredEvents.map((event) => (
-                        <div
-                            key={event.id}
-                            onClick={() => navigate(`/events/${event.id}`)}
-                            className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition cursor-pointer flex flex-col"
-                        >
-                            {event.tags?.length > 0 && (
-                                <div className="flex flex-wrap gap-1 mb-2">
-                                    {event.tags.map(tag => (
-                                        <TagChip key={tag.id} name={tag.name} />
-                                    ))}
-                                </div>
-                            )}
-                            <h3 className="text-xl font-bold text-gray-900 mb-2">{event.title}</h3>
-                            <p className="text-gray-500 text-sm mb-4 line-clamp-2">{event.description}</p>
-                            <div className="space-y-2 text-sm text-gray-600 mb-6 flex-grow">
-                                <div className="flex items-center">
-                                    <span className="mr-2">📅</span> {event.date}
-                                </div>
-                                <div className="flex items-center">
-                                    <span className="mr-2">⏰</span> {event.time}
-                                </div>
-                                <div className="flex items-center">
-                                    <span className="mr-2">📍</span> {event.location}
-                                </div>
-                                <div className="flex items-center">
-                                    <span className="mr-2">👥</span>
-                                    {event.participantsCount} / {event.capacity || '∞'} participants
-                                </div>
-                            </div>
-                            <button
-                                onClick={(e) =>
-                                    event.isJoined ? handleLeave(e, event.id) : handleJoin(e, event.id)
-                                }
-                                disabled={(event.isFull && !event.isJoined) || event.isOrganizer}
-                                className={`w-full py-2 px-4 rounded-lg font-medium transition ${
-                                    event.isOrganizer
-                                        ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
-                                        : event.isFull && !event.isJoined
-                                            ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                                            : event.isJoined
-                                                ? 'bg-white border border-red-500 text-red-500 hover:bg-red-50'
-                                                : 'bg-green-600 text-white hover:bg-green-700'
-                                }`}
+                <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {filteredEvents.map((event) => (
+                            <div
+                                key={event.id}
+                                onClick={() => navigate(`/events/${event.id}`)}
+                                className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition cursor-pointer flex flex-col"
                             >
-                                {event.isOrganizer
-                                    ? 'Organizer'
-                                    : event.isFull && !event.isJoined
-                                        ? 'Full'
-                                        : event.isJoined
-                                            ? 'Leave Event'
-                                            : 'Join Event'}
+                                {event.tags?.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mb-2">
+                                        {event.tags.map(tag => (
+                                            <TagChip key={tag.id} name={tag.name} />
+                                        ))}
+                                    </div>
+                                )}
+                                <h3 className="text-xl font-bold text-gray-900 mb-2">{event.title}</h3>
+                                <p className="text-gray-500 text-sm mb-4 line-clamp-2">{event.description}</p>
+                                <div className="space-y-2 text-sm text-gray-600 mb-6 flex-grow">
+                                    <div className="flex items-center">
+                                        <span className="mr-2">📅</span> {event.date}
+                                    </div>
+                                    <div className="flex items-center">
+                                        <span className="mr-2">⏰</span> {event.time}
+                                    </div>
+                                    <div className="flex items-center">
+                                        <span className="mr-2">📍</span> {event.location}
+                                    </div>
+                                    <div className="flex items-center">
+                                        <span className="mr-2">👥</span>
+                                        {event.participantsCount} / {event.capacity || '∞'} participants
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={(e) =>
+                                        event.isJoined ? handleLeave(e, event.id) : handleJoin(e, event.id)
+                                    }
+                                    disabled={(event.isFull && !event.isJoined) || event.isOrganizer}
+                                    className={`w-full py-2 px-4 rounded-lg font-medium transition ${
+                                        event.isOrganizer
+                                            ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
+                                            : event.isFull && !event.isJoined
+                                                ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                                : event.isJoined
+                                                    ? 'bg-white border border-red-500 text-red-500 hover:bg-red-50'
+                                                    : 'bg-green-600 text-white hover:bg-green-700'
+                                    }`}
+                                >
+                                    {event.isOrganizer
+                                        ? 'Organizer'
+                                        : event.isFull && !event.isJoined
+                                            ? 'Full'
+                                            : event.isJoined
+                                                ? 'Leave Event'
+                                                : 'Join Event'}
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+
+                    {totalPages > 1 && (
+                        <div className="flex items-center justify-center gap-4 mt-8">
+                            <button
+                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                disabled={currentPage === 1}
+                                className="flex items-center gap-1 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                            >
+                                <ChevronLeft className="w-4 h-4" /> Previous
+                            </button>
+                            <span className="text-sm text-gray-600">
+                                Page {currentPage} of {totalPages}
+                            </span>
+                            <button
+                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                disabled={currentPage === totalPages}
+                                className="flex items-center gap-1 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                            >
+                                Next <ChevronRight className="w-4 h-4" />
                             </button>
                         </div>
-                    ))}
-                </div>
+                    )}
+                </>
             )}
         </div>
     );

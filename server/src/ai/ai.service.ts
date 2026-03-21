@@ -2,10 +2,40 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import OpenAI from 'openai';
+import { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 import { Event } from '../entities/event.entity';
 import { EventsService } from '../events/events.service';
+import { EventResponseDto } from '../events/dto/event-response.dto';
 import { TagsService } from '../tags/tags.service';
 import { agentTools } from './tools';
+
+interface ToolArgs {
+  role?: string;
+  timeframe?: string;
+  tag?: string;
+  date?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  search?: string;
+  eventTitle?: string;
+  offset?: number;
+}
+
+const AI_PAGE_SIZE = 10;
+
+interface AIEvent {
+  title: string;
+  date: string;
+  time: string;
+  location: string;
+  tags: { id: number; name: string }[];
+  participantsCount: number;
+  [key: string]: unknown;
+}
+
+interface AIEventWithRole extends AIEvent {
+  role: string;
+}
 
 @Injectable()
 export class AiService {
@@ -22,30 +52,39 @@ export class AiService {
 
   async ask(userId: number, question: string, history: { role: string; content: string }[] = []): Promise<string> {
     const today = new Date();
-    const systemPrompt = `CRITICAL RULE: You MUST respond in the SAME language as the user's latest message. If the user writes in Russian, respond in Russian. If in English, respond in English. This rule overrides everything else.
+    const systemPrompt = `CRITICAL RULE: You MUST respond in the SAME language as the user's latest message. If the user writes in Ukrainian, respond in Ukrainian. If in English, respond in English. For any other language, respond in English. This rule overrides everything else.
 
 You are a friendly AI assistant for an event management application.
-You help users find information about their events. You can ONLY READ data — never create, edit, or delete anything.
+You help users find information about their events. You can ONLY READ data — you absolutely CANNOT create, edit, or delete anything.
 Today's date is ${today.toISOString().split('T')[0]}.
 Current day of week: ${today.toLocaleDateString('en-US', { weekday: 'long' })}.
 
+CRITICAL — Write operation requests:
+- If the user asks you to CREATE, ADD, EDIT, UPDATE, DELETE, REMOVE, or CANCEL an event (or any other data), you MUST clearly refuse and explain that you are a read-only assistant.
+- Example responses: "I'm sorry, I can only help you find and view event information. I cannot create, edit, or delete events. Please use the app interface for that." or in Ukrainian: "Вибачте, я можу лише допомогти знайти та переглянути інформацію про події. Я не можу створювати, редагувати чи видаляти події. Будь ласка, використовуйте інтерфейс додатку для цього."
+- NEVER respond with "Okay!" or any confirmation that implies the action was performed or accepted.
+
 Response rules:
-- NEVER use markdown (no **, *, #, -, bullet points, or numbered lists).
-- Write naturally in short sentences, like a chat message.
-- When listing multiple events, write them inline: "Event A (date, location), Event B (date, location)".
-- For a single event, describe it in one sentence.
-- Keep responses short — 1-3 sentences max.
+- Use markdown formatting: **bold** for event names, bullet lists, tables when appropriate.
+- When listing events, use a numbered list with this format:
+  1. **Event Name** — Date, Time, Location
+     Tags: tag1, tag2 | Participants: N
+- Tool results include pagination info (total, showing, hasMore). Show ALL events from the tool result — they are already limited to 10 per page.
+- If "hasMore" is true, add at the end: "Showing X of N events. Ask me to show more if needed."
+- If the user asks "show more" / "покажи ще" / "next" etc., call the same tool again with offset increased by 10.
+- For a single event, describe it with details using bold labels.
+- Keep responses concise but informative.
 - After answering, suggest a SHORT follow-up question that you CAN actually answer using your available tools (event lookups, listing, filtering). Never suggest actions you cannot perform (like registering, creating, editing, or deleting events).
 - Tag names in the system are in English (e.g. "tech", "business", "music", "art", "sports", "education"). When the user mentions a tag in another language, translate it to English before filtering.
-- If the user says "no", "нет", or declines a suggestion, respond politely like "Okay! Let me know if you need anything else." in the user's language. Do NOT say you didn't understand.
+- If the user says "no", "ні", or declines a suggestion, respond politely like "Okay! Let me know if you need anything else." in the user's language. Do NOT say you didn't understand.
 If the question is truly unclear or unsupported, respond in the user's language: "Sorry, I didn't understand that. Please try rephrasing your question."`;
 
     const recentHistory = history.slice(-10);
 
-    const messages: any[] = [
-      { role: 'system', content: systemPrompt },
-      ...recentHistory.map((msg) => ({ role: msg.role, content: msg.content })),
-      { role: 'user', content: question },
+    const messages: ChatCompletionMessageParam[] = [
+      { role: 'system' as const, content: systemPrompt },
+      ...recentHistory.map((msg) => ({ role: msg.role as 'user' | 'assistant', content: msg.content })),
+      { role: 'user' as const, content: question },
     ];
 
     for (let i = 0; i < 3; i++) {
@@ -62,11 +101,12 @@ If the question is truly unclear or unsupported, respond in the user's language:
       }
 
       if (choice.finish_reason === 'tool_calls') {
-        messages.push(choice.message);
+        messages.push(choice.message as ChatCompletionMessageParam);
 
         for (const toolCall of choice.message.tool_calls || []) {
-          const fn = (toolCall as any).function;
-          const args = JSON.parse(fn.arguments);
+          if (toolCall.type !== 'function') continue;
+          const fn = toolCall.function;
+          const args: ToolArgs = JSON.parse(fn.arguments);
           let result: string;
 
           switch (fn.name) {
@@ -161,23 +201,27 @@ If the question is truly unclear or unsupported, respond in the user's language:
     }
   }
 
-  private filterByDate(events: any[], args: any): any[] {
+  private filterByDate<T extends { date: string }>(events: T[], args: ToolArgs): T[] {
     if (args.date) {
       return events.filter((e) => e.date === args.date);
     }
     if (args.dateFrom && args.dateTo) {
-      return events.filter((e) => e.date >= args.dateFrom && e.date <= args.dateTo);
+      const from = args.dateFrom;
+      const to = args.dateTo;
+      return events.filter((e) => e.date >= from && e.date <= to);
     }
     if (args.dateFrom) {
-      return events.filter((e) => e.date >= args.dateFrom);
+      const from = args.dateFrom;
+      return events.filter((e) => e.date >= from);
     }
     if (args.dateTo) {
-      return events.filter((e) => e.date <= args.dateTo);
+      const to = args.dateTo;
+      return events.filter((e) => e.date <= to);
     }
     return events;
   }
 
-  private filterByTimeframe(events: any[], timeframe?: string): any[] {
+  private filterByTimeframe<T extends { date: string }>(events: T[], timeframe?: string): T[] {
     if (!timeframe || timeframe === 'all') return events;
     const range = this.getDateRange(timeframe);
     if (!range) return events;
@@ -188,8 +232,21 @@ If the question is truly unclear or unsupported, respond in the user's language:
     });
   }
 
-  private async executeGetUserEvents(userId: number, args: any): Promise<string> {
-    const allEvents = await this.eventsService.getUserEvents(userId);
+  private async getAllUserEvents(userId: number): Promise<EventResponseDto[]> {
+    const allEvents: EventResponseDto[] = [];
+    let page = 1;
+    let totalPages = 1;
+    do {
+      const result = await this.eventsService.getUserEvents(userId, page, 10);
+      allEvents.push(...result.data);
+      totalPages = result.meta.totalPages;
+      page++;
+    } while (page <= totalPages);
+    return allEvents;
+  }
+
+  private async executeGetUserEvents(userId: number, args: ToolArgs): Promise<string> {
+    const allEvents = await this.getAllUserEvents(userId);
 
     let filtered = allEvents.map((e) => ({
       ...e,
@@ -207,24 +264,31 @@ If the question is truly unclear or unsupported, respond in the user's language:
     if (args.tag) {
       const tagLower = args.tag.toLowerCase();
       filtered = filtered.filter((e) =>
-        (e.tags || []).some((t: any) => t.name.toLowerCase() === tagLower),
+        (e.tags || []).some((t) => t.name.toLowerCase() === tagLower),
       );
     }
 
-    return JSON.stringify(
-      filtered.map((e) => ({
+    const total = filtered.length;
+    const offset = args.offset || 0;
+    const page = filtered.slice(offset, offset + AI_PAGE_SIZE);
+
+    return JSON.stringify({
+      total,
+      showing: { from: offset + 1, to: offset + page.length },
+      hasMore: offset + AI_PAGE_SIZE < total,
+      events: page.map((e) => ({
         title: e.title,
         date: e.date,
         time: e.time,
         location: e.location,
-        tags: (e.tags || []).map((t: any) => t.name),
+        tags: (e.tags || []).map((t) => t.name),
         role: e.role,
         participantsCount: e.participantsCount,
       })),
-    );
+    });
   }
 
-  private async executeGetEventDetails(userId: number, args: any): Promise<string> {
+  private async executeGetEventDetails(userId: number, args: ToolArgs): Promise<string> {
     const events = await this.eventsRepository
       .createQueryBuilder('event')
       .leftJoinAndSelect('event.participants', 'participant')
@@ -254,8 +318,16 @@ If the question is truly unclear or unsupported, respond in the user's language:
     );
   }
 
-  private async executeGetPublicEvents(args: any): Promise<string> {
-    const allEvents = await this.eventsService.findAll(undefined, args.search);
+  private async executeGetPublicEvents(args: ToolArgs): Promise<string> {
+    const allEvents: EventResponseDto[] = [];
+    let page = 1;
+    let totalPages = 1;
+    do {
+      const result = await this.eventsService.findAll(undefined, args.search, undefined, page, 10);
+      allEvents.push(...result.data);
+      totalPages = result.meta.totalPages;
+      page++;
+    } while (page <= totalPages);
 
     let filtered = [...allEvents];
 
@@ -265,25 +337,32 @@ If the question is truly unclear or unsupported, respond in the user's language:
 
     if (args.tag) {
       const tagLower = args.tag.toLowerCase();
-      filtered = filtered.filter((e: any) =>
-        (e.tags || []).some((t: any) => t.name.toLowerCase() === tagLower),
+      filtered = filtered.filter((e) =>
+        (e.tags || []).some((t) => t.name.toLowerCase() === tagLower),
       );
     }
 
-    return JSON.stringify(
-      filtered.map((e) => ({
+    const total = filtered.length;
+    const offset = args.offset || 0;
+    const slice = filtered.slice(offset, offset + AI_PAGE_SIZE);
+
+    return JSON.stringify({
+      total,
+      showing: { from: offset + 1, to: offset + slice.length },
+      hasMore: offset + AI_PAGE_SIZE < total,
+      events: slice.map((e) => ({
         title: e.title,
         date: e.date,
         time: e.time,
         location: e.location,
-        tags: (e.tags || []).map((t: any) => t.name),
+        tags: (e.tags || []).map((t) => t.name),
         participantsCount: e.participantsCount,
       })),
-    );
+    });
   }
 
-  private async executeCountUserEvents(userId: number, args: any): Promise<string> {
-    const allEvents = await this.eventsService.getUserEvents(userId);
+  private async executeCountUserEvents(userId: number, args: ToolArgs): Promise<string> {
+    const allEvents = await this.getAllUserEvents(userId);
 
     let filtered = allEvents.map((e) => ({
       ...e,
